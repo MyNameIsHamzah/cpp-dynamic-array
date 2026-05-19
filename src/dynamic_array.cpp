@@ -64,6 +64,11 @@ int main() {
     test(myVec, 3);
     test(myVec, 4);
     test(myVec, 5);
+    test(myVec, 6);
+    test(myVec, 7);
+    test(myVec, 8);
+    test(myVec, 9);
+    test(myVec, 10);
 
     return 0;
 }
