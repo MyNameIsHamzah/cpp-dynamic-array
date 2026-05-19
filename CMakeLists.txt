@@ -11,4 +11,4 @@ include_directories(src)
 # ---------------------------------------------------------
 # Build the Executables (Target Name -> Files needed)
 # ---------------------------------------------------------
-add_executable(main  src/dynamic_array.cpp)
+add_executable(dynamic_array  src/dynamic_array.cpp)
