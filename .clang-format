@@ -1,0 +1,38 @@
+---
+# Language and Base Style
+Language: Cpp
+BasedOnStyle: Google
+
+# --- POINTER & REFERENCE ALIGNMENT ---
+# This fixes your specific annoyance.
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left # Available in Clang-Format 13+
+
+# --- INDENTATION & SPACING ---
+IndentWidth: 4
+ColumnLimit: 100 # Standard for modern wide-screen dev
+Standard: Latest # Uses modern C++ features (C++20/23)
+UseTab: Never
+IndentCaseLabels: true
+NamespaceIndentation: None
+
+# --- BRACE STYLE ---
+# 'Attach' keeps braces on the same line (K&R style). 
+# Change to 'Allman' if you want them on new lines.
+BreakBeforeBraces: Attach 
+
+# --- CLEANUP & MODERN STANDARDS ---
+SortIncludes: true
+IncludeBlocks: Regroup
+FixNamespaceComments: true
+MaxEmptyLinesToKeep: 1
+
+# --- QUANT-SPECIFIC READABILITY ---
+# Allows simple getters/setters on one line
+AllowShortFunctionsOnASingleLine: Inline
+# Aligns long function parameters vertically
+AlignAfterOpenBracket: Align
+# Avoids breaking strings across lines
+BreakStringLiterals: false
+---

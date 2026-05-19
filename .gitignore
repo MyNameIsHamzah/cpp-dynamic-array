@@ -1,0 +1,10 @@
+#include compiled binaries
+main
+*.out
+*.exe
+
+#ignore cmake builds
+build/
+
+#ignore vscode settings
+.vscode/
