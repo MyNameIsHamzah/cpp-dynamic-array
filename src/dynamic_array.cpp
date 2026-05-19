@@ -3,7 +3,6 @@
 #include <string>
 
 template <typename T>
-
 class dynamicArray {
    private:
     std::size_t m_size{0};
