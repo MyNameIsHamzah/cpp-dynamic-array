@@ -9,11 +9,14 @@ This project reimplements the core behaviour of a heap-allocated, resizable arra
 ## Structure
 
 ```
-src/
-├── dynamic_array.cpp   # Core implementation
-├── CMakeLists.txt      # Build config
-├── .clang-format       # Formatting rules
-└── .gitignore
+cpp-dynamic-array/
+├── build/
+├── src/
+│   └── dynamic_array.cpp   # Core implementation
+├── CMakeLists.txt
+├── .clang-format
+├── .gitignore
+└── readme.md
 ```
 
 ## Build
