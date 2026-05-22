@@ -93,11 +93,21 @@ void testDefaultInit() {
     }
 }
 
+void testCustomIterator() {  // need to implement custom iterator although will work with raw
+                             // pointers
+    dynamicArray<std::string> myVec{"once", "chance", "...", "bang!"};
+
+    for (auto it = myVec.begin(); it != myVec.end(); ++it) {
+        std::cout << *it;
+    }
+}
+
 int main() {
     // testReallocation();
     // testCopyConstructor();
     // testCopyAssignmentConstructor();
     // testRangeBasedLoop();
-    testDefaultInit();
+    // testDefaultInit();
+    testCustomIterator();
     return 0;
 }
