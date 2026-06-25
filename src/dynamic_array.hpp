@@ -94,7 +94,8 @@ class dynamicArray {
 
     std::size_t size() const { return m_size; }
     std::size_t capacity() const { return m_capacity; }
-    T get(std::size_t index) const { return m_data[index]; }
-    Iterator begin() const { return m_data; };
-    Iterator end() const { return m_data + m_size; };
+    T& operator[](std::size_t index) { return m_data[index]; }
+    const T& operator[](std::size_t index) const { return m_data[index]; }
+    Iterator begin() { return m_data; };
+    Iterator end() { return m_data + m_size; };  // will need to create const Iterator
 };

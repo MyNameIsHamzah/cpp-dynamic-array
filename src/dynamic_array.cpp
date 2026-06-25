@@ -13,7 +13,7 @@ void pushBackAndPrint(dynamicArray<T>& vec, T x) {
     std::cout << "current contents: ";
 
     for (std::size_t i{0}; i < vec.size(); ++i) {
-        std::cout << vec.get(i) << " ";
+        std::cout << vec[i] << " ";
     }
 
     std::cout << "\n\n";
@@ -26,7 +26,7 @@ void print(dynamicArray<T>& vec) {
     std::cout << "current contents: ";
 
     for (std::size_t i{0}; i < vec.size(); ++i) {
-        std::cout << vec.get(i) << " ";
+        std::cout << vec[i] << " ";
     }
 
     std::cout << "\n\n";
@@ -102,12 +102,20 @@ void testCustomIterator() {  // need to implement custom iterator although will 
     }
 }
 
+void testChangingIndex() {
+    dynamicArray<std::string> myVec{"once", "chance"};
+    myVec[0] = "I'm";
+    myVec[1] = "Back";
+    print(myVec);
+}
+
 int main() {
     // testReallocation();
     // testCopyConstructor();
     // testCopyAssignmentConstructor();
     // testRangeBasedLoop();
     // testDefaultInit();
-    testCustomIterator();
+    // testCustomIterator();
+    testChangingIndex();
     return 0;
 }
