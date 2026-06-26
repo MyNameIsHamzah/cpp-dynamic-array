@@ -26,6 +26,20 @@ class dynamicArray {
         bool operator!=(const Iterator& other) const { return m_ptr != other.m_ptr; }
     };
 
+    class ConstIterator {
+       private:
+        const T* m_ptr;
+
+       public:
+        ConstIterator(const T* ptr) : m_ptr(ptr) {};
+        const T& operator*() { return *m_ptr; };
+        ConstIterator& operator++() {
+            ++m_ptr;
+            return *this;
+        }
+        bool operator!=(const ConstIterator& other) const { return m_ptr != other.m_ptr; }
+    };
+
     dynamicArray() : m_size(0), m_capacity(0), m_data(nullptr) {};  // default constructor
 
     dynamicArray(
@@ -96,6 +110,8 @@ class dynamicArray {
     std::size_t capacity() const { return m_capacity; }
     T& operator[](std::size_t index) { return m_data[index]; }
     const T& operator[](std::size_t index) const { return m_data[index]; }
-    Iterator begin() { return m_data; };
-    Iterator end() { return m_data + m_size; };  // will need to create const Iterator
+    Iterator begin() { return m_data; }
+    Iterator end() { return m_data + m_size; }
+    ConstIterator begin() const { return m_data; }
+    ConstIterator end() const { return m_data + m_size; }
 };

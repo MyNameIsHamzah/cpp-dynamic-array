@@ -96,7 +96,14 @@ void testDefaultInit() {
 void testCustomIterator() {  // need to implement custom iterator although will work with raw
                              // pointers
     dynamicArray<std::string> myVec{"once", "chance", "...", "bang!"};
+    for (auto it = myVec.begin(); it != myVec.end(); ++it) {
+        std::cout << *it;
+    }
+}
 
+void testCustomIteratorConstVec() {
+    const dynamicArray<std::string> myVec{"once", "chance", "...", "bang!"};
+    // shouldnt be able to deref indexes and edit them
     for (auto it = myVec.begin(); it != myVec.end(); ++it) {
         std::cout << *it;
     }
@@ -116,6 +123,7 @@ int main() {
     // testRangeBasedLoop();
     // testDefaultInit();
     // testCustomIterator();
-    testChangingIndex();
+    // testChangingIndex();
+    testCustomIteratorConstVec();
     return 0;
 }
