@@ -1,7 +1,9 @@
 #pragma once
+#include <algorithm>
 #include <cstddef>
 #include <initializer_list>
 #include <iostream>
+#include <memory>
 #include <string>
 
 template <typename T>
@@ -9,7 +11,7 @@ class dynamicArray {
    private:
     std::size_t m_size;
     std::size_t m_capacity;
-    T* m_data;
+    std::unique_ptr<T[]> m_data;
 
    public:
     class Iterator {
@@ -53,13 +55,9 @@ class dynamicArray {
         }
     }
 
-    ~dynamicArray() { delete[] m_data; }  // destructor
-
     dynamicArray(const dynamicArray<T>& other)  // copy constructor
         : m_size(other.m_size), m_capacity(other.m_capacity), m_data(new T[other.m_capacity]) {
-        for (std::size_t i{0}; i < other.m_size; ++i) {
-            m_data[i] = other.m_data[i];
-        }
+        std::copy(other.m_data.get(), other.m_data.get() + other.m_size, m_data.get());
     }
 
     dynamicArray& operator=(const dynamicArray<T>& other) {  // copy assignment operator
@@ -69,49 +67,58 @@ class dynamicArray {
 
         m_capacity = other.m_capacity;
         m_size = other.m_size;
-        T* tempPointer(new T[m_capacity]);
+        auto temp{std::make_unique<T[]>(m_size)};
+        std::copy(other.m_data.get(), other.m_data.get() + other.m_size, temp.get());
+        m_data.reset();
+        m_data = std::move(temp);
+        temp.reset();
+        return *this;
+    }
 
-        for (std::size_t i{0}; i < m_size; ++i) {
-            tempPointer[i] = other.m_data[i];
+    dynamicArray(dynamicArray<T>&& other) noexcept  // move constructor
+        : m_size(other.m_size), m_capacity(other.m_capacity), m_data(std::move(other.m_data)) {
+        other.m_data.release();
+        other.m_capacity = 0;
+        other.m_size = 0;
+    }
+
+    dynamicArray& operator=(dynamicArray<T>&& other) noexcept {  // move assignment
+        if (this == &other) {
+            return *this;
         }
+        m_capacity = other.m_capacity;
+        m_size = other.m_size;
+        m_data.reset();
+        m_data = std::move(other.m_data);
 
-        delete[] m_data;
-        m_data = tempPointer;
-        tempPointer = nullptr;
-
+        other.m_capacity = 0;
+        other.m_size = 0;
+        other.m_data.reset();
         return *this;
     }
 
     void push_back(const T& x) {
         if (m_data == nullptr) {
             m_capacity += 1;
-            m_data = new T[m_capacity];
+            m_data = std::make_unique<T[]>(m_capacity);
         }
-
         if (m_size == m_capacity) {
             m_capacity *= 2;
-            T* tempPointer{new T[m_capacity]};
-
-            for (std::size_t i{0}; i < m_size; ++i) {  // copy contents of old array to new one
-
-                tempPointer[i] = m_data[i];
-            }
-
-            delete[] m_data;
-            m_data = tempPointer;
-            tempPointer = nullptr;
+            auto temp{std::make_unique<T[]>(m_capacity)};
+            std::copy(m_data.get(), m_data.get() + m_size, temp.get());
+            m_data.reset();
+            m_data = std::move(temp);
         }
-
         m_data[m_size] = x;
-        m_size++;
+        ++m_size;
     }
 
     std::size_t size() const { return m_size; }
     std::size_t capacity() const { return m_capacity; }
     T& operator[](std::size_t index) { return m_data[index]; }
     const T& operator[](std::size_t index) const { return m_data[index]; }
-    Iterator begin() { return m_data; }
-    Iterator end() { return m_data + m_size; }
-    ConstIterator begin() const { return m_data; }
-    ConstIterator end() const { return m_data + m_size; }
+    Iterator begin() { return m_data.get(); }
+    Iterator end() { return m_data.get() + m_size; }
+    ConstIterator begin() const { return m_data.get(); }
+    ConstIterator end() const { return m_data.get() + m_size; }
 };
