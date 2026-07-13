@@ -103,8 +103,8 @@ int main() {
     // testCopyAssignment();
     // testMoveConstructor();
     // testMoveAssignment();
-    // testPushBack();
-    // testInitPushback();
-    printIndex();
+    testPushBack();
+    testInitPushback();
+    // printIndex();
     return 0;
 }

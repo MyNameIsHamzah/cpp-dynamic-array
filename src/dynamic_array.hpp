@@ -46,9 +46,7 @@ class dynamicArray {
 
     dynamicArray(
         const std::initializer_list<T>& list)  // overloaded constructor w/ default initialiser
-        : m_size(static_cast<std::size_t>(list.size())),
-          m_capacity(static_cast<std::size_t>(list.size())),
-          m_data(new T[static_cast<std::size_t>(list.size())]) {
+        : m_size(list.size()), m_capacity(list.size()), m_data(std::make_unique<T[]>(list.size())) {
         std::size_t i{0};
         for (auto val : list) {
             m_data[i++] = val;
@@ -56,7 +54,9 @@ class dynamicArray {
     }
 
     dynamicArray(const dynamicArray<T>& other)  // copy constructor
-        : m_size(other.m_size), m_capacity(other.m_capacity), m_data(new T[other.m_capacity]) {
+        : m_size(other.m_size),
+          m_capacity(other.m_capacity),
+          m_data(std::make_unique<T[]>(other.m_capacity)) {
         std::copy(other.m_data.get(), other.m_data.get() + other.m_size, m_data.get());
     }
 
@@ -64,20 +64,16 @@ class dynamicArray {
         if (this == &other) {
             return *this;
         }
-
+        auto temp{std::make_unique<T[]>(other.m_capacity)};
+        std::copy(other.m_data.get(), other.m_data.get() + other.m_size, temp.get());
+        m_data = std::move(temp);
         m_capacity = other.m_capacity;
         m_size = other.m_size;
-        auto temp{std::make_unique<T[]>(m_size)};
-        std::copy(other.m_data.get(), other.m_data.get() + other.m_size, temp.get());
-        m_data.reset();
-        m_data = std::move(temp);
-        temp.reset();
         return *this;
     }
 
     dynamicArray(dynamicArray<T>&& other) noexcept  // move constructor
         : m_size(other.m_size), m_capacity(other.m_capacity), m_data(std::move(other.m_data)) {
-        other.m_data.release();
         other.m_capacity = 0;
         other.m_size = 0;
     }
@@ -88,25 +84,18 @@ class dynamicArray {
         }
         m_capacity = other.m_capacity;
         m_size = other.m_size;
-        m_data.reset();
         m_data = std::move(other.m_data);
 
         other.m_capacity = 0;
         other.m_size = 0;
-        other.m_data.reset();
         return *this;
     }
 
     void push_back(const T& x) {
-        if (m_data == nullptr) {
-            m_capacity += 1;
-            m_data = std::make_unique<T[]>(m_capacity);
-        }
         if (m_size == m_capacity) {
-            m_capacity *= 2;
+            m_capacity = (m_capacity == 0) ? 1 : m_capacity * 2;
             auto temp{std::make_unique<T[]>(m_capacity)};
             std::copy(m_data.get(), m_data.get() + m_size, temp.get());
-            m_data.reset();
             m_data = std::move(temp);
         }
         m_data[m_size] = x;
