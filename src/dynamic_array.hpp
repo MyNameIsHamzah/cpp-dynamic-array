@@ -91,7 +91,7 @@ class dynamicArray {
         return *this;
     }
 
-    void push_back(const T& x) {
+    void push_back(const T& x) {  // takes l value refs
         if (m_size == m_capacity) {
             m_capacity = (m_capacity == 0) ? 1 : m_capacity * 2;
             auto temp{std::make_unique<T[]>(m_capacity)};
@@ -99,6 +99,18 @@ class dynamicArray {
             m_data = std::move(temp);
         }
         m_data[m_size] = x;
+        ++m_size;
+    }
+
+    void push_back(
+        T&& x) {  // takes r value refs - more commonly used but takes advantage of move semantics.
+        if (m_size == m_capacity) {
+            m_capacity = (m_capacity == 0) ? 1 : m_capacity * 2;
+            auto temp{std::make_unique<T[]>(m_capacity)};
+            std::copy(m_data.get(), m_data.get() + m_size, temp.get());
+            m_data = std::move(temp);
+        }
+        m_data[m_size] = std::move(x);
         ++m_size;
     }
 

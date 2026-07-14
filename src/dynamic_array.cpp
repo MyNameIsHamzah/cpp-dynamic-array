@@ -93,6 +93,16 @@ void testInitPushback() {
     basicPrint(a);
 }
 
+void testMovePushBack() {
+    dynamicArray<int> a{1, 2, 3, 4, 5};
+    std::cout << "a: ";
+    basicPrint(a);
+    a.push_back(6);
+    a.push_back(7);
+    std::cout << "after pushback: ";
+    basicPrint(a);
+}
+
 void printIndex() {
     dynamicArray<int> a{1, 2, 3, 4, 5};
     std::cout << a[4];
@@ -103,8 +113,9 @@ int main() {
     // testCopyAssignment();
     // testMoveConstructor();
     // testMoveAssignment();
-    testPushBack();
-    testInitPushback();
+    // testPushBack();
+    // testInitPushback();
+    testMovePushBack();
     // printIndex();
     return 0;
 }
