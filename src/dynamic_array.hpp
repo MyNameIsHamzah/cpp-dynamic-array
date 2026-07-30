@@ -123,3 +123,43 @@ class dynamicArray {
     ConstIterator begin() const { return m_data.get(); }
     ConstIterator end() const { return m_data.get() + m_size; }
 };
+
+template <>
+class dynamicArray<bool> {
+   private:
+    std::size_t m_count;  // number of bools
+    std::size_t m_byteCapacity;
+    std::unique_ptr<u_int8_t[]> m_data;
+
+   public:
+    dynamicArray<bool>() : m_count(0), m_byteCapacity(0), m_data(nullptr){};  // default constructor
+
+    dynamicArray(
+        const std::initializer_list<bool>& list)  // overloaded constructor w/ default initialiser
+        : m_count(list.size()),
+          m_byteCapacity((list.size() + 7) / 8),
+          m_data(std::make_unique<u_int8_t[]>(m_byteCapacity)) {
+        std::size_t i{0};
+        u_int8_t packedBool{0};
+        int counter{0};
+        for (const auto& val : list) {
+            if (val) {
+                packedBool |= (1 << counter);
+            }
+            ++counter;
+            if (counter == 8) {
+                m_data[i++] = packedBool;
+                packedBool = 0;
+                counter = 0;
+            }
+            if (counter > 0) {
+                m_data[i++] = packedBool;
+            }
+        }
+    }
+
+    // std::size_t size() const { return m_count; }
+    // std::size_t capacity() const { return m_byteCapacity; }
+    // u_int8_t& operator[](std::size_t index) { return m_data[index]; }
+    // const u_int8_t& operator[](std::size_t index) const { return m_data[index]; }
+};

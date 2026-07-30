@@ -108,6 +108,13 @@ void printIndex() {
     std::cout << a[4];
 }
 
+void testBoolInit() {
+    dynamicArray<bool> a{true, true, false};
+    // for (auto i : a) { //needs proper iterator
+    //     std::cout << static_cast<int>(i) << " ";
+    // }
+}
+
 int main() {
     // testCopyConstructor();
     // testCopyAssignment();
@@ -115,7 +122,8 @@ int main() {
     // testMoveAssignment();
     // testPushBack();
     // testInitPushback();
-    testMovePushBack();
+    // testMovePushBack();
     // printIndex();
+    testBoolInit();
     return 0;
 }
