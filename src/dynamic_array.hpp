@@ -129,37 +129,36 @@ class dynamicArray<bool> {
    private:
     std::size_t m_count;  // number of bools
     std::size_t m_byteCapacity;
-    std::unique_ptr<u_int8_t[]> m_data;
+    std::unique_ptr<std::int8_t[]> m_data;
+    std::size_t calculateBucket(std::size_t globalIdx) { return globalIdx / 8; }
+    std::uint8_t calculateByteIndex(std::size_t globalIdx) { return 1 << (globalIdx % 8); }
 
    public:
-    dynamicArray<bool>() : m_count(0), m_byteCapacity(0), m_data(nullptr){};  // default constructor
+    dynamicArray() : m_count(0), m_byteCapacity(0), m_data(nullptr) {};  // default constructor
 
     dynamicArray(
         const std::initializer_list<bool>& list)  // overloaded constructor w/ default initialiser
         : m_count(list.size()),
           m_byteCapacity((list.size() + 7) / 8),
-          m_data(std::make_unique<u_int8_t[]>(m_byteCapacity)) {
-        std::size_t i{0};
-        u_int8_t packedBool{0};
-        int counter{0};
-        for (const auto& val : list) {
+          m_data(std::make_unique<std::int8_t[]>(m_byteCapacity)) {
+        std::size_t globalIdx{0};
+        for (bool val : list) {
             if (val) {
-                packedBool |= (1 << counter);
+                std::cout << "bucket " << globalIdx / 8 << "\n";
+                std::cout << "left shift " << (globalIdx << (globalIdx % 8)) << "\n";
+
+                m_data[calculateBucket(globalIdx)] |= calculateByteIndex(globalIdx);
             }
-            ++counter;
-            if (counter == 8) {
-                m_data[i++] = packedBool;
-                packedBool = 0;
-                counter = 0;
-            }
-            if (counter > 0) {
-                m_data[i++] = packedBool;
-            }
+            globalIdx++;
         }
     }
 
-    // std::size_t size() const { return m_count; }
-    // std::size_t capacity() const { return m_byteCapacity; }
-    // u_int8_t& operator[](std::size_t index) { return m_data[index]; }
+    std::size_t size() const { return m_count; }
+    std::size_t capacity() const { return m_byteCapacity; }
+    bool operator[](std::size_t globalIndex) {
+        auto bucket{m_data[calculateBucket(globalIndex)]};
+        bool isOne{(bucket & (calculateByteIndex(globalIndex))) != 0};
+        return isOne;
+    }
     // const u_int8_t& operator[](std::size_t index) const { return m_data[index]; }
 };
