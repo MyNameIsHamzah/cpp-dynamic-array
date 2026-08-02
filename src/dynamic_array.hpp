@@ -127,26 +127,42 @@ class dynamicArray {
 template <>
 class dynamicArray<bool> {
    private:
-    std::size_t m_count;  // number of bools
+    std::size_t m_count;
     std::size_t m_byteCapacity;
-    std::unique_ptr<std::int8_t[]> m_data;
-    std::size_t calculateBucket(std::size_t globalIdx) { return globalIdx / 8; }
-    std::uint8_t calculateByteIndex(std::size_t globalIdx) { return 1 << (globalIdx % 8); }
+    std::unique_ptr<std::uint8_t[]> m_data;
+    static std::size_t calculateBucket(std::size_t globalIdx) { return globalIdx / 8; }
+    static std::uint8_t calculateByteIndex(std::size_t globalIdx) { return 1 << (globalIdx % 8); }
 
    public:
+    class Proxy {
+       private:
+        std::uint8_t* m_bytePtr;
+        std::uint8_t m_bitMask;
+
+       public:
+        Proxy(std::uint8_t* bytePtr, std::uint8_t bitMask)
+            : m_bytePtr{bytePtr}, m_bitMask{bitMask} {}
+        Proxy& operator=(bool val) {
+            if (val) {
+                *m_bytePtr |= m_bitMask;
+            } else {
+                *m_bytePtr &= ~m_bitMask;
+            }
+            return *this;
+        }
+        Proxy& operator=(const Proxy& other) { return *this = static_cast<bool>(other); }
+        operator bool() const noexcept { return ((*m_bytePtr & m_bitMask) != 0); }
+    };
     dynamicArray() : m_count(0), m_byteCapacity(0), m_data(nullptr) {};  // default constructor
 
     dynamicArray(
         const std::initializer_list<bool>& list)  // overloaded constructor w/ default initialiser
         : m_count(list.size()),
           m_byteCapacity((list.size() + 7) / 8),
-          m_data(std::make_unique<std::int8_t[]>(m_byteCapacity)) {
+          m_data(std::make_unique<std::uint8_t[]>(m_byteCapacity)) {
         std::size_t globalIdx{0};
         for (bool val : list) {
             if (val) {
-                std::cout << "bucket " << globalIdx / 8 << "\n";
-                std::cout << "left shift " << (globalIdx << (globalIdx % 8)) << "\n";
-
                 m_data[calculateBucket(globalIdx)] |= calculateByteIndex(globalIdx);
             }
             globalIdx++;
@@ -155,10 +171,7 @@ class dynamicArray<bool> {
 
     std::size_t size() const { return m_count; }
     std::size_t capacity() const { return m_byteCapacity; }
-    bool operator[](std::size_t globalIndex) {
-        auto bucket{m_data[calculateBucket(globalIndex)]};
-        bool isOne{(bucket & (calculateByteIndex(globalIndex))) != 0};
-        return isOne;
+    Proxy operator[](std::size_t globalIndex) {  // might have to rethink this..
+        return Proxy(&m_data[calculateBucket(globalIndex)], calculateByteIndex(globalIndex));
     }
-    // const u_int8_t& operator[](std::size_t index) const { return m_data[index]; }
 };

@@ -109,11 +109,29 @@ void printIndex() {
 }
 
 void testBoolInit() {
-    dynamicArray<bool> a{false, true, true, true, true, true, true, true, true};
+    dynamicArray<bool> a{true, true, true, true, true, false};
     for (std::size_t i{0}; i < a.size(); ++i) {
         std::cout << a[i] << " ";
     }
+    // std::cout << a[0];
+    // std::cout << a[1];
 }
+
+void testBoolIndexAssign() {
+    dynamicArray<bool> a{true};
+    std::cout << "before: " << a[0];
+    a[0] = false;
+    std::cout << " after: " << a[0];
+}
+
+void testBoolAssignOtherInd() {
+    dynamicArray<bool> a{true, false};
+
+    std::cout << "before: " << a[0] << " " << a[1] << "\n";
+    a[1] = a[0];
+    std::cout << "after: " << a[0] << " " << a[1];
+}
+
 int main() {
     // testCopyConstructor();
     // testCopyAssignment();
@@ -123,6 +141,9 @@ int main() {
     // testInitPushback();
     // testMovePushBack();
     // printIndex();
-    testBoolInit();
+
+    // testBoolInit();
+    // testBoolIndexAssign();
+    testBoolAssignOtherInd();
     return 0;
 }
