@@ -169,9 +169,49 @@ class dynamicArray<bool> {
         }
     }
 
+    dynamicArray(const dynamicArray& other)  // copy constructor
+        : m_count{other.m_count},
+          m_byteCapacity{other.m_byteCapacity},
+          m_data(std::make_unique<std::uint8_t[]>(m_byteCapacity)) {
+        std::copy(other.m_data.get(), other.m_data.get() + other.m_byteCapacity, m_data.get());
+    }
+
+    dynamicArray operator=(const dynamicArray& other) {
+        if (this == &other) {
+            return *this;
+        }
+        auto temp{std::make_unique<std::uint8_t[]>(other.m_byteCapacity)};
+        std::copy(other.m_data.get(), other.m_data.get() + other.m_byteCapacity, temp.get());
+        m_count = other.m_count;
+        m_byteCapacity = other.m_byteCapacity;
+        m_data = std::move(temp);
+        return *this;
+    }
+
+    dynamicArray(dynamicArray&& other) noexcept
+        : m_count(other.m_count),
+          m_byteCapacity(other.m_byteCapacity),
+          m_data(std::move(other.m_data)) {
+        other.m_byteCapacity = 0;
+        other.m_count = 0;
+    }
+
+    dynamicArray operator=(dynamicArray&& other) noexcept {
+        if (this == &other) {
+            return *this;
+        }
+        m_count = other.m_count;
+        m_byteCapacity = other.m_byteCapacity;
+        m_data = std::move(other.m_data);
+
+        other.m_count = 0;
+        other.m_byteCapacity = 0;
+
+        return *this;
+    }
     std::size_t size() const { return m_count; }
     std::size_t capacity() const { return m_byteCapacity; }
-    Proxy operator[](std::size_t globalIndex) {  // might have to rethink this..
+    Proxy operator[](std::size_t globalIndex) {  // proxy pattern to enable indexing
         return Proxy(&m_data[calculateBucket(globalIndex)], calculateByteIndex(globalIndex));
     }
 };

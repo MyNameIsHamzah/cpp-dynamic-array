@@ -113,8 +113,6 @@ void testBoolInit() {
     for (std::size_t i{0}; i < a.size(); ++i) {
         std::cout << a[i] << " ";
     }
-    // std::cout << a[0];
-    // std::cout << a[1];
 }
 
 void testBoolIndexAssign() {
@@ -132,6 +130,38 @@ void testBoolAssignOtherInd() {
     std::cout << "after: " << a[0] << " " << a[1];
 }
 
+void testBoolCopyConstructor() {
+    dynamicArray<bool> a{false, false};
+    std::cout << "a: " << a[0] << " " << a[1] << "\n";
+    dynamicArray<bool> b{a};
+    std::cout << "b: " << b[0] << " " << b[1] << "\n";
+}
+
+void testBoolCopyAssignment() {
+    dynamicArray<bool> a{false, false};
+    std::cout << "a: " << a[0] << " " << a[1] << "\n";
+    dynamicArray<bool> b{true, true};
+    std::cout << "b: " << b[0] << " " << b[1] << "\n";
+    a = b;
+    std::cout << "a after assignemnt: " << a[0] << " " << a[1] << "\n";
+}
+
+void testBoolMoveConstructor() {
+    dynamicArray<bool> a{false, false};
+    std::cout << "a: " << a[0] << " " << a[1] << "\n";
+    dynamicArray<bool> b{std::move(a)};
+    std::cout << "b: " << b[0] << " " << b[1] << "\n";
+}
+
+void testBoolMoveAssignment() {
+    dynamicArray<bool> a{false, false};
+    std::cout << "a: " << a[0] << " " << a[1] << "\n";
+    dynamicArray<bool> b{true, true};
+    std::cout << "b: " << b[0] << " " << b[1] << "\n";
+    b = std::move(a);
+    std::cout << "b after move: " << b[0] << " " << b[1] << "\n";
+}
+
 int main() {
     // testCopyConstructor();
     // testCopyAssignment();
@@ -144,6 +174,10 @@ int main() {
 
     // testBoolInit();
     // testBoolIndexAssign();
-    testBoolAssignOtherInd();
+    // testBoolAssignOtherInd();
+    // testBoolCopyConstructor();
+    // testBoolCopyAssignment();
+    // testBoolMoveConstructor();
+    testBoolMoveAssignment();
     return 0;
 }
