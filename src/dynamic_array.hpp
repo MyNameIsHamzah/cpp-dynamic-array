@@ -153,6 +153,29 @@ class dynamicArray<bool> {
         Proxy& operator=(const Proxy& other) { return *this = static_cast<bool>(other); }
         operator bool() const noexcept { return ((*m_bytePtr & m_bitMask) != 0); }
     };
+
+    class Iterator {
+       private:
+        std::uint8_t* m_bytePtr;
+        std::uint8_t m_bitMask;
+
+       public:
+        Iterator(std::uint8_t* bytePtr, std::uint8_t bitMask)
+            : m_bytePtr{bytePtr}, m_bitMask{bitMask} {}
+        Proxy operator*() const { return Proxy(m_bytePtr, m_bitMask); }
+        Iterator& operator++() {
+            m_bitMask <<= 1;
+            if (m_bitMask == 0) {
+                m_bitMask = 0 << 1;
+                m_bytePtr++;
+            }
+            return *this;
+        }
+        bool operator!=(const Iterator& other) const {
+            return m_bytePtr != other.m_bytePtr || m_bitMask != other.m_bitMask;
+        }
+    };
+
     dynamicArray() : m_count(0), m_byteCapacity(0), m_data(nullptr) {};  // default constructor
 
     dynamicArray(
@@ -211,6 +234,8 @@ class dynamicArray<bool> {
     }
     std::size_t size() const { return m_count; }
     std::size_t capacity() const { return m_byteCapacity; }
+    Iterator begin() const { return Iterator(m_data.get(), calculateByteIndex(0)); }
+    Iterator end() const { return Iterator(m_data.get(), calculateByteIndex(m_count)); }
     Proxy operator[](std::size_t globalIndex) {  // proxy pattern to enable indexing
         return Proxy(&m_data[calculateBucket(globalIndex)], calculateByteIndex(globalIndex));
     }

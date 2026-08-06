@@ -162,6 +162,16 @@ void testBoolMoveAssignment() {
     std::cout << "b after move: " << b[0] << " " << b[1] << "\n";
 }
 
+void testBoolRangeBased() {
+    dynamicArray<bool> a{true, true, false};
+    // for (auto x : a) {
+    //     std::cout << x << " ";
+    // }
+    for (auto& x : a) {
+        x = false;
+    }
+}
+
 int main() {
     // testCopyConstructor();
     // testCopyAssignment();
@@ -178,6 +188,7 @@ int main() {
     // testBoolCopyConstructor();
     // testBoolCopyAssignment();
     // testBoolMoveConstructor();
-    testBoolMoveAssignment();
+    // testBoolMoveAssignment();
+    testBoolRangeBased();
     return 0;
 }
