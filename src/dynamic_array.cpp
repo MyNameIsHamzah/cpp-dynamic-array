@@ -1,5 +1,6 @@
 #include "dynamic_array.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <initializer_list>
 #include <iostream>
@@ -169,9 +170,45 @@ void testBoolRangeBased() {
     for (auto x : a) {
         std::cout << x << " ";
     }
-    // for (auto& x : a) {
-    //     x = false;
-    // }
+    std::cout << std::count(a.begin(), a.end(), 1);
+}
+
+void testIteratorStlAlgs() {
+    dynamicArray<bool> a{true, false};
+
+    std::cout << "count: " << std::count(a.begin(), a.end(), 1) << "\n";
+
+    auto it{std::find(a.begin(), a.end(), 1)};
+    if (it != a.end()) {
+        auto index{std::distance(a.begin(), it)};
+        std::cout << "Found true at index " << index << "\n";
+    }
+}
+
+void testMutateRangedBased() {
+    dynamicArray<bool> a{false, false, false};
+    for (auto&& x : a) {  // use universal ref to update val
+        std::cout << x << " ";
+        x = !x;
+    }
+    std::cout << "\n";
+    for (auto x : a) {
+        std::cout << x << " ";
+    }
+}
+
+void testAttemptingToUpdateConstVec() {
+    const dynamicArray<bool> a{true, true};
+    for (auto x : a) {
+        std::cout << x << " ";
+    }
+    std::cout << "\n";
+
+    auto&& it{a.begin()};
+    *it = false;
+    for (auto x : a) {
+        std::cout << x << " ";
+    }
 }
 
 int main() {
@@ -191,6 +228,9 @@ int main() {
     // testBoolCopyAssignment();
     // testBoolMoveConstructor();
     // testBoolMoveAssignment();
-    testBoolRangeBased();
+    // testBoolRangeBased();
+    // testIteratorStlAlgs();
+    // testMutateRangedBased();
+    testAttemptingToUpdateConstVec();
     return 0;
 }

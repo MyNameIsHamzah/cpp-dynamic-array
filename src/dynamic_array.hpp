@@ -3,8 +3,8 @@
 #include <cstddef>
 #include <initializer_list>
 #include <iostream>
+#include <iterator>
 #include <memory>
-#include <string>
 
 template <typename T>
 class dynamicArray {
@@ -160,6 +160,12 @@ class dynamicArray<bool> {
         std::uint8_t m_bitMask;
 
        public:
+        using iterator_category = std::forward_iterator_tag;  // for now? bidirectional support?
+        using value_type = bool;
+        using difference_type = std::ptrdiff_t;
+        using reference = Proxy;
+        using pointer = void;
+
         Iterator(std::uint8_t* bytePtr, std::uint8_t bitMask)
             : m_bytePtr{bytePtr}, m_bitMask{bitMask} {}
         Proxy operator*() const { return Proxy(m_bytePtr, m_bitMask); }
