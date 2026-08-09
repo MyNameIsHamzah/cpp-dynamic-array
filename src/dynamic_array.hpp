@@ -166,7 +166,7 @@ class dynamicArray<bool> {
         Iterator& operator++() {
             m_bitMask <<= 1;
             if (m_bitMask == 0) {
-                m_bitMask = 0 << 1;
+                m_bitMask = 1;
                 m_bytePtr++;
             }
             return *this;
@@ -199,7 +199,7 @@ class dynamicArray<bool> {
         std::copy(other.m_data.get(), other.m_data.get() + other.m_byteCapacity, m_data.get());
     }
 
-    dynamicArray operator=(const dynamicArray& other) {
+    dynamicArray& operator=(const dynamicArray& other) {
         if (this == &other) {
             return *this;
         }
@@ -219,7 +219,7 @@ class dynamicArray<bool> {
         other.m_count = 0;
     }
 
-    dynamicArray operator=(dynamicArray&& other) noexcept {
+    dynamicArray& operator=(dynamicArray&& other) noexcept {
         if (this == &other) {
             return *this;
         }
@@ -235,7 +235,9 @@ class dynamicArray<bool> {
     std::size_t size() const { return m_count; }
     std::size_t capacity() const { return m_byteCapacity; }
     Iterator begin() const { return Iterator(m_data.get(), calculateByteIndex(0)); }
-    Iterator end() const { return Iterator(m_data.get(), calculateByteIndex(m_count)); }
+    Iterator end() const {
+        return Iterator(m_data.get() + calculateBucket(m_count), calculateByteIndex(m_count));
+    }
     Proxy operator[](std::size_t globalIndex) {  // proxy pattern to enable indexing
         return Proxy(&m_data[calculateBucket(globalIndex)], calculateByteIndex(globalIndex));
     }

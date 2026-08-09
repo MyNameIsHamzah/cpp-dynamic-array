@@ -163,13 +163,15 @@ void testBoolMoveAssignment() {
 }
 
 void testBoolRangeBased() {
-    dynamicArray<bool> a{true, true, false};
-    // for (auto x : a) {
-    //     std::cout << x << " ";
-    // }
-    for (auto& x : a) {
-        x = false;
+    dynamicArray<bool> a{false, false, false, false, false, false, false, false, true,
+                         true,  true,  true,  true,  true,  true,  true,  false, false,
+                         false, false, false, false, false, false, true};
+    for (auto x : a) {
+        std::cout << x << " ";
     }
+    // for (auto& x : a) {
+    //     x = false;
+    // }
 }
 
 int main() {
