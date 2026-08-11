@@ -1,10 +1,12 @@
 #pragma once
 #include <algorithm>
+#include <concepts>
 #include <cstddef>
 #include <initializer_list>
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <type_traits>
 
 template <typename T>
 class dynamicArray {
@@ -134,15 +136,21 @@ class dynamicArray<bool> {
     static std::uint8_t calculateByteIndex(std::size_t globalIdx) { return 1 << (globalIdx % 8); }
 
    public:
-    class Proxy {
+    template <bool isConst>
+    class ProxyImpl {
        private:
-        std::uint8_t* m_bytePtr;
+        using m_uint8_t = std::conditional_t<isConst, const std::uint8_t, std::uint8_t>;
+
+        m_uint8_t* m_bytePtr;
         std::uint8_t m_bitMask;
 
        public:
-        Proxy(std::uint8_t* bytePtr, std::uint8_t bitMask)
+        ProxyImpl(m_uint8_t* bytePtr, std::uint8_t bitMask)
             : m_bytePtr{bytePtr}, m_bitMask{bitMask} {}
-        Proxy& operator=(bool val) {
+
+        ProxyImpl& operator=(bool val)
+            requires(!isConst)
+        {
             if (val) {
                 *m_bytePtr |= m_bitMask;
             } else {
@@ -150,26 +158,36 @@ class dynamicArray<bool> {
             }
             return *this;
         }
-        Proxy& operator=(const Proxy& other) { return *this = static_cast<bool>(other); }
+        ProxyImpl& operator=(const ProxyImpl& other)
+            requires(!isConst)
+        {
+            return *this = static_cast<bool>(other);
+        }
         operator bool() const noexcept { return ((*m_bytePtr & m_bitMask) != 0); }
     };
+    using Proxy = ProxyImpl<false>;
+    using ConstProxy = ProxyImpl<true>;
 
-    class Iterator {
+    template <bool isConst>
+    class IteratorImpl {
        private:
-        std::uint8_t* m_bytePtr;
+        using m_uint8_t = std::conditional_t<isConst, const std::uint8_t, std::uint8_t>;
+        using m_proxy = std::conditional_t<isConst, ConstProxy, Proxy>;
+
+        m_uint8_t* m_bytePtr;
         std::uint8_t m_bitMask;
 
        public:
-        using iterator_category = std::forward_iterator_tag;  // for now? bidirectional support?
+        using iterator_category = std::forward_iterator_tag;  // for now? bidirectional support? NO
         using value_type = bool;
         using difference_type = std::ptrdiff_t;
-        using reference = Proxy;
+        using reference = m_proxy;
         using pointer = void;
 
-        Iterator(std::uint8_t* bytePtr, std::uint8_t bitMask)
+        IteratorImpl(m_uint8_t* bytePtr, std::uint8_t bitMask)
             : m_bytePtr{bytePtr}, m_bitMask{bitMask} {}
-        Proxy operator*() const { return Proxy(m_bytePtr, m_bitMask); }
-        Iterator& operator++() {
+        m_proxy operator*() const { return m_proxy(m_bytePtr, m_bitMask); }
+        IteratorImpl operator++() {
             m_bitMask <<= 1;
             if (m_bitMask == 0) {
                 m_bitMask = 1;
@@ -177,10 +195,13 @@ class dynamicArray<bool> {
             }
             return *this;
         }
-        bool operator!=(const Iterator& other) const {
+        bool operator!=(const IteratorImpl& other) const {
             return m_bytePtr != other.m_bytePtr || m_bitMask != other.m_bitMask;
         }
     };
+
+    using Iterator = IteratorImpl<false>;
+    using ConstIterator = IteratorImpl<true>;
 
     dynamicArray() : m_count(0), m_byteCapacity(0), m_data(nullptr) {};  // default constructor
 
@@ -240,11 +261,24 @@ class dynamicArray<bool> {
     }
     std::size_t size() const { return m_count; }
     std::size_t capacity() const { return m_byteCapacity; }
-    Iterator begin() const { return Iterator(m_data.get(), calculateByteIndex(0)); }
-    Iterator end() const {
+    Iterator begin() { return Iterator(m_data.get(), calculateByteIndex(0)); }
+    Iterator end() {
         return Iterator(m_data.get() + calculateBucket(m_count), calculateByteIndex(m_count));
     }
+    ConstIterator cbegin() const { return ConstIterator(m_data.get(), calculateByteIndex(0)); }
+    ConstIterator cend() const {
+        return ConstIterator(m_data.get() + calculateBucket(m_count), calculateByteIndex(m_count));
+    }
+    ConstIterator begin() const { return ConstIterator(m_data.get(), calculateByteIndex(0)); }
+    ConstIterator end() const {
+        return ConstIterator(m_data.get() + calculateBucket(m_count), calculateByteIndex(m_count));
+    }
+
     Proxy operator[](std::size_t globalIndex) {  // proxy pattern to enable indexing
         return Proxy(&m_data[calculateBucket(globalIndex)], calculateByteIndex(globalIndex));
+    }
+
+    ConstProxy operator[](std::size_t globalIndex) const {  // proxy pattern to enable indexing
+        return ConstProxy(&m_data[calculateBucket(globalIndex)], calculateByteIndex(globalIndex));
     }
 };

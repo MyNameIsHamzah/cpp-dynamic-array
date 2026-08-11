@@ -204,10 +204,27 @@ void testAttemptingToUpdateConstVec() {
     }
     std::cout << "\n";
 
-    auto&& it{a.begin()};
-    *it = false;
+    // auto it = a.begin();
+
     for (auto x : a) {
         std::cout << x << " ";
+    }
+}
+
+void printConstIndex(const dynamicArray<bool>& arr) {
+    std::cout << arr[0];
+}
+
+void testConstSubscriptor() {
+    const dynamicArray<bool> a{true, true};
+    printConstIndex(a);
+}
+
+void testCbeginAndCend() {
+    dynamicArray<bool> a{true, true};
+    for (auto it{a.cbegin()}; it != a.cend(); ++it) {  // using cend and cbegin
+        // *it = false; doesn't work
+        std::cout << *it << " ";
     }
 }
 
@@ -231,6 +248,8 @@ int main() {
     // testBoolRangeBased();
     // testIteratorStlAlgs();
     // testMutateRangedBased();
-    testAttemptingToUpdateConstVec();
+    // testAttemptingToUpdateConstVec();
+    // testConstSubscriptor();
+    testCbeginAndCend();
     return 0;
 }
