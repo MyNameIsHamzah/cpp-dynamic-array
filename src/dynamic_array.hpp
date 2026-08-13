@@ -259,6 +259,23 @@ class dynamicArray<bool> {
 
         return *this;
     }
+
+    void push_back(const bool& val) {  // takes l value ref
+        // capacity reached logic
+        auto lastBucket = calculateBucket(m_count);
+        if (lastBucket == m_byteCapacity && (m_count == 0 || m_data[lastBucket] == 0b1111'1111)) {
+            std::cout << "reached capacity\n";
+            m_byteCapacity = (m_count == 0) ? 1 : m_byteCapacity * 2;
+            auto temp{std::make_unique<std::uint8_t[]>(m_byteCapacity)};
+            std::copy(m_data.get(), m_data.get() + calculateBucket(m_count), temp.get());
+            m_data = std::move(temp);
+        }
+        // insert logic
+        m_count++;
+        if (val) {
+            m_data[lastBucket] |= calculateByteIndex(m_count);
+        }
+    }
     std::size_t size() const { return m_count; }
     std::size_t capacity() const { return m_byteCapacity; }
     Iterator begin() { return Iterator(m_data.get(), calculateByteIndex(0)); }

@@ -228,6 +228,38 @@ void testCbeginAndCend() {
     }
 }
 
+void testBoolPushbackEmpty() {
+    dynamicArray<bool> a{};
+    std::cout << "size: " << a.size() << "\n";
+    std::cout << "buckets: " << a.capacity() << "\n";
+
+    bool f = false;
+    a.push_back(f);
+    std::cout << "contents: ";
+    for (auto b : a) {
+        std::cout << b << " ";
+    }
+    std::cout << "\n";
+    std::cout << "size: " << a.size() << "\n";
+    std::cout << "buckets: " << a.capacity() << "\n";
+}
+
+void testBoolPushbackFullBucket() {
+    dynamicArray<bool> a{true, true, true, true, true, true, true, true};
+    std::cout << "size: " << a.size() << "\n";
+    std::cout << "buckets: " << a.capacity() << "\n";
+
+    bool f = true;
+    a.push_back(f);
+    std::cout << "contents: ";
+    for (auto b : a) {
+        std::cout << b << " ";
+    }
+    std::cout << "\n";
+    std::cout << "size: " << a.size() << "\n";
+    std::cout << "buckets: " << a.capacity() << "\n";
+}
+
 int main() {
     // testCopyConstructor();
     // testCopyAssignment();
@@ -250,6 +282,8 @@ int main() {
     // testMutateRangedBased();
     // testAttemptingToUpdateConstVec();
     // testConstSubscriptor();
-    testCbeginAndCend();
+    // testCbeginAndCend();
+    // testBoolPushbackEmpty();
+    testBoolPushbackFullBucket();
     return 0;
 }
