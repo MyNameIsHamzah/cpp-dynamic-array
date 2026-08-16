@@ -231,33 +231,48 @@ void testCbeginAndCend() {
 void testBoolPushbackEmpty() {
     dynamicArray<bool> a{};
     std::cout << "size: " << a.size() << "\n";
-    std::cout << "buckets: " << a.capacity() << "\n";
+    std::cout << "capacity: " << a.capacity() << "\n";
 
     bool f = false;
     a.push_back(f);
+    a.push_back(f);
+    a.push_back(f);
+    a.push_back(f);
+
     std::cout << "contents: ";
     for (auto b : a) {
         std::cout << b << " ";
     }
     std::cout << "\n";
     std::cout << "size: " << a.size() << "\n";
-    std::cout << "buckets: " << a.capacity() << "\n";
+    std::cout << "capacity: " << a.capacity() << "\n";
 }
 
-void testBoolPushbackFullBucket() {
-    dynamicArray<bool> a{true, true, true, true, true, true, true, true};
+void testBoolPushbackOneOffFullBucket() {
+    dynamicArray<bool> a{false, false, false, false, true, true, true};
     std::cout << "size: " << a.size() << "\n";
-    std::cout << "buckets: " << a.capacity() << "\n";
+    std::cout << "capacity: " << a.capacity() << "\n";
 
-    bool f = true;
-    a.push_back(f);
     std::cout << "contents: ";
     for (auto b : a) {
         std::cout << b << " ";
     }
     std::cout << "\n";
+
+    a.push_back(true);
+
+    a.push_back(false);
+    a.push_back(false);
+    a.push_back(false);
+    a.push_back(false);
+
+    std::cout << "contents: ";
+    for (auto b : a) {
+        std::cout << b << " ";
+    }
+
     std::cout << "size: " << a.size() << "\n";
-    std::cout << "buckets: " << a.capacity() << "\n";
+    std::cout << "capacity: " << a.capacity() << "\n";
 }
 
 int main() {
@@ -284,6 +299,6 @@ int main() {
     // testConstSubscriptor();
     // testCbeginAndCend();
     // testBoolPushbackEmpty();
-    testBoolPushbackFullBucket();
+    testBoolPushbackOneOffFullBucket();
     return 0;
 }

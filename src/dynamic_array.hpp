@@ -260,21 +260,30 @@ class dynamicArray<bool> {
         return *this;
     }
 
-    void push_back(const bool& val) {  // takes l value ref
+    void push_back(bool val) {  // takes l value ref
         // capacity reached logic
         auto lastBucket = calculateBucket(m_count);
-        if (lastBucket == m_byteCapacity && (m_count == 0 || m_data[lastBucket] == 0b1111'1111)) {
-            std::cout << "reached capacity\n";
-            m_byteCapacity = (m_count == 0) ? 1 : m_byteCapacity * 2;
-            auto temp{std::make_unique<std::uint8_t[]>(m_byteCapacity)};
-            std::copy(m_data.get(), m_data.get() + calculateBucket(m_count), temp.get());
+
+        std::cout << "\n pushback debug\n";
+        std::cout << "last bucket = " << lastBucket << "\n";
+        std::cout << "last index used = " << static_cast<int>(calculateByteIndex(m_count))
+                  << "\n\n";
+
+        if ((lastBucket == m_byteCapacity - 1 && calculateByteIndex(m_count) & 128) ||
+            (m_byteCapacity == 0 && m_count == 0)) {
+            auto newCapacity = (m_byteCapacity == 0) ? 1 : m_byteCapacity * 2;
+            std::cout << "new capacity " << newCapacity << "\n";
+            auto temp{std::make_unique<std::uint8_t[]>(newCapacity)};
+            std::copy(m_data.get(), m_data.get() + m_byteCapacity, temp.get());
+            m_byteCapacity = newCapacity;
             m_data = std::move(temp);
         }
         // insert logic
-        m_count++;
         if (val) {
-            m_data[lastBucket] |= calculateByteIndex(m_count);
+            std::cout << "is true\n";
+            m_data[calculateBucket(m_count)] |= calculateByteIndex(m_count);
         }
+        m_count++;
     }
     std::size_t size() const { return m_count; }
     std::size_t capacity() const { return m_byteCapacity; }
