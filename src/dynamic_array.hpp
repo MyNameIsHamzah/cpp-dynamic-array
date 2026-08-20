@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <cassert>
 #include <concepts>
 #include <cstddef>
 #include <initializer_list>
@@ -13,7 +14,8 @@ class dynamicArray {
    private:
     std::size_t m_size;
     std::size_t m_capacity;
-    std::unique_ptr<T[]> m_data;
+    std::unique_ptr<T[]> m_data;  // we must think about allocation here. this doesn't allow for
+                                  // reserve to be implmeented i think.
 
    public:
     class Iterator {
@@ -43,6 +45,10 @@ class dynamicArray {
         }
         bool operator!=(const ConstIterator& other) const { return m_ptr != other.m_ptr; }
     };
+
+    // combine the iterators above using std conditional like the bool specialisation
+    // primary template iterators does not satisfy any iterator concept. work from input and output
+    // interator assertions and work upward till we get to random access
 
     dynamicArray() : m_size(0), m_capacity(0), m_data(nullptr) {};  // default constructor
 
@@ -92,7 +98,8 @@ class dynamicArray {
         other.m_size = 0;
         return *this;
     }
-
+    // think about self referencing bugs with push back. copy on grow instaed of moving is meh.
+    // capacity means bytes in one class and elemnts in other.
     void push_back(const T& x) {  // takes l value refs
         if (m_size == m_capacity) {
             m_capacity = (m_capacity == 0) ? 1 : m_capacity * 2;
@@ -124,6 +131,11 @@ class dynamicArray {
     Iterator end() { return m_data.get() + m_size; }
     ConstIterator begin() const { return m_data.get(); }
     ConstIterator end() const { return m_data.get() + m_size; }
+
+    // static_assert(std::random_access_iterator<Iterator>);
+
+    // added this tells me what my iterator is missing
+    // to satisfy being a random access iterator
 };
 
 template <>
@@ -178,7 +190,9 @@ class dynamicArray<bool> {
         std::uint8_t m_bitMask;
 
        public:
-        using iterator_category = std::forward_iterator_tag;  // for now? bidirectional support? NO
+        using iterator_category =
+            std::forward_iterator_tag;  // fthis is currenty lying. this is an input iterator tag
+                                        // pllus and random access on a seperat iterator_concept
         using value_type = bool;
         using difference_type = std::ptrdiff_t;
         using reference = m_proxy;
@@ -260,19 +274,11 @@ class dynamicArray<bool> {
         return *this;
     }
 
-    void push_back(bool val) {  // takes l value ref
+    void push_back(bool val) {  // i think the condition here may be testing the wrong question
         // capacity reached logic
-        auto lastBucket = calculateBucket(m_count);
-
-        std::cout << "\n pushback debug\n";
-        std::cout << "last bucket = " << lastBucket << "\n";
-        std::cout << "last index used = " << static_cast<int>(calculateByteIndex(m_count))
-                  << "\n\n";
-
-        if ((lastBucket == m_byteCapacity - 1 && calculateByteIndex(m_count) & 128) ||
+        if ((calculateBucket(m_count) == m_byteCapacity - 1 && calculateByteIndex(m_count) & 128) ||
             (m_byteCapacity == 0 && m_count == 0)) {
             auto newCapacity = (m_byteCapacity == 0) ? 1 : m_byteCapacity * 2;
-            std::cout << "new capacity " << newCapacity << "\n";
             auto temp{std::make_unique<std::uint8_t[]>(newCapacity)};
             std::copy(m_data.get(), m_data.get() + m_byteCapacity, temp.get());
             m_byteCapacity = newCapacity;
@@ -280,7 +286,6 @@ class dynamicArray<bool> {
         }
         // insert logic
         if (val) {
-            std::cout << "is true\n";
             m_data[calculateBucket(m_count)] |= calculateByteIndex(m_count);
         }
         m_count++;
