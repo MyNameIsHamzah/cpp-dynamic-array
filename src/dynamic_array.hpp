@@ -16,35 +16,32 @@ class dynamicArray {
     std::size_t m_capacity;
     std::unique_ptr<T[]> m_data;  // we must think about allocation here. this doesn't allow for
                                   // reserve to be implmeented i think.
+                                  // friend class IteratorImpl;
 
    public:
-    class Iterator {
+    template <bool isConst>
+    class IteratorImpl {
        private:
-        T* m_ptr;
+        using m_T = std::conditional_t<isConst, const T, T>;
+        m_T* m_ptr;
+        friend class IteratorImpl<!isConst>;
 
        public:
-        Iterator(T* ptr) : m_ptr(ptr) {};
-        T& operator*() { return *m_ptr; };
-        Iterator& operator++() {
+        IteratorImpl(m_T* ptr) : m_ptr(ptr) {};
+        template <bool otherConst>
+            requires(isConst && !otherConst)  // we only want non const to const
+        IteratorImpl(const IteratorImpl<otherConst>& other) : m_ptr(other.m_ptr) {}
+
+        m_T& operator*() { return *m_ptr; };
+        IteratorImpl& operator++() {
             ++m_ptr;
             return *this;
         }
-        bool operator!=(const Iterator& other) const { return m_ptr != other.m_ptr; }
+        bool operator!=(const IteratorImpl& other) const { return m_ptr != other.m_ptr; }
     };
 
-    class ConstIterator {
-       private:
-        const T* m_ptr;
-
-       public:
-        ConstIterator(const T* ptr) : m_ptr(ptr) {};
-        const T& operator*() { return *m_ptr; };
-        ConstIterator& operator++() {
-            ++m_ptr;
-            return *this;
-        }
-        bool operator!=(const ConstIterator& other) const { return m_ptr != other.m_ptr; }
-    };
+    using Iterator = IteratorImpl<false>;
+    using ConstIterator = IteratorImpl<true>;
 
     // combine the iterators above using std conditional like the bool specialisation
     // primary template iterators does not satisfy any iterator concept. work from input and output
@@ -127,10 +124,12 @@ class dynamicArray {
     std::size_t capacity() const { return m_capacity; }
     T& operator[](std::size_t index) { return m_data[index]; }
     const T& operator[](std::size_t index) const { return m_data[index]; }
-    Iterator begin() { return m_data.get(); }
-    Iterator end() { return m_data.get() + m_size; }
-    ConstIterator begin() const { return m_data.get(); }
-    ConstIterator end() const { return m_data.get() + m_size; }
+    Iterator begin() { return Iterator(m_data.get()); }
+    Iterator end() { return Iterator(m_data.get() + m_size); }
+    ConstIterator cbegin() const noexcept { return begin(); }
+    ConstIterator cend() const noexcept { return end(); }
+    ConstIterator begin() const { return ConstIterator(m_data.get()); }
+    ConstIterator end() const { return ConstIterator(m_data.get() + m_size); }
 
     // static_assert(std::random_access_iterator<Iterator>);
 

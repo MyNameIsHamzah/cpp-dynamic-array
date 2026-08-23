@@ -1,6 +1,7 @@
 #include "dynamic_array.hpp"
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <initializer_list>
 #include <iostream>
@@ -275,6 +276,18 @@ void testBoolPushbackOneOffFullBucket() {
     std::cout << "capacity: " << a.capacity() << "\n";
 }
 
+// void testGenericIteratorTier() {
+//     static_assert(std::random_access_iterator<dynamicArray<int>::Iterator>);
+// }
+
+void testBasicIteratorConversion() {
+    dynamicArray<int> arr{1, 2, 3};
+    dynamicArray<int>::ConstIterator it = arr.begin();
+    // dynamicArray<int>::Iterator it = arr.cbegin(); should not work
+
+    std::cout << *it;
+}
+
 int main() {
     // testCopyConstructor();
     // testCopyAssignment();
@@ -299,6 +312,9 @@ int main() {
     // testConstSubscriptor();
     // testCbeginAndCend();
     // testBoolPushbackEmpty();
-    testBoolPushbackOneOffFullBucket();
+    // testBoolPushbackOneOffFullBucket();
+
+    // testGenericIteratorTier();
+    testBasicIteratorConversion();
     return 0;
 }
