@@ -27,8 +27,8 @@ class dynamicArray {
         friend class IteratorImpl<!isConst>;
 
        public:
-        using iterator_category = std::forward_iterator_tag;
-        using value_type = m_T;
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type = T;
         using difference_type = std::ptrdiff_t;
         using reference = m_T&;
         using pointer = m_T*;
@@ -37,9 +37,9 @@ class dynamicArray {
 
         IteratorImpl(m_T* ptr) : m_ptr(ptr) {};
 
-        IteratorImpl(IteratorImpl& other) { m_ptr = other.m_ptr; }
+        IteratorImpl(const IteratorImpl& other) { m_ptr = other.m_ptr; }
 
-        IteratorImpl& operator=(IteratorImpl& other) {
+        IteratorImpl& operator=(const IteratorImpl& other) {
             if (*this == other) {
                 return *this;
             }
@@ -47,25 +47,25 @@ class dynamicArray {
             return *this;
         }
 
-        IteratorImpl(IteratorImpl&& other) noexcept {
-            m_ptr = other.m_ptr;
-            other.m_ptr = nullptr;
-        }
+        // IteratorImpl(IteratorImpl&& other) noexcept {
+        //     m_ptr = other.m_ptr;
+        //     other.m_ptr = nullptr;
+        // }
 
-        IteratorImpl& operator=(IteratorImpl&& other) noexcept {
-            if (*this == other) {
-                return *this;
-            }
-            m_ptr = other.m_ptr;
-            other.m_ptr = nullptr;
-            return *this;
-        }
+        // IteratorImpl& operator=(IteratorImpl&& other) noexcept {
+        //     if (*this == other) {
+        //         return *this;
+        //     }
+        //     m_ptr = other.m_ptr;
+        //     other.m_ptr = nullptr;
+        //     return *this;
+        // }
 
         template <bool otherConst>
             requires(isConst && !otherConst)  // we only want non const to const
         IteratorImpl(const IteratorImpl<otherConst>& other) : m_ptr(other.m_ptr) {}
 
-        m_T& operator*() { return *m_ptr; };
+        m_T& operator*() const { return *m_ptr; };
 
         IteratorImpl& operator++() {
             m_ptr++;
@@ -78,8 +78,18 @@ class dynamicArray {
             return temp;
         }
 
-        // IteratorImpl* operator->() { return m_ptr; } think about this? only to work with custom
-        // class and struct types?
+        IteratorImpl& operator--() {
+            m_ptr++;
+            return *this;
+        }
+
+        IteratorImpl operator--(int) {
+            IteratorImpl temp = m_ptr;
+            --m_ptr;
+            return temp;
+        }
+
+        pointer operator->() const { return &this->operator*(); }
 
         bool operator!=(const IteratorImpl& other) const { return m_ptr != other.m_ptr; }
 

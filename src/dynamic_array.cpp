@@ -277,12 +277,12 @@ void testBoolPushbackOneOffFullBucket() {
 }
 
 void testGenericIteratorSatisfiesForward() {
-    // static_assert(std::forward_iterator<dynamicArray<int>::Iterator>);
+    static_assert(std::forward_iterator<dynamicArray<int>::Iterator>);
     dynamicArray<int> arr{1, 2, 3};
     auto it = arr.begin();
     auto it2 = ++arr.begin();
-    // std::cout << *it++ << " " << *it << "\n";
-    // std::cout << (it == it2) << "\n";
+    std::cout << *it++ << " " << *it << "\n";
+    std::cout << (it == it2) << "\n";
     std::cout << *it << " " << *it2 << "\n";
     it = it2;
     std::cout << *it << " " << *it2 << "\n";
@@ -293,10 +293,10 @@ void testGenericIteratorSatisfiesForward() {
     std::cout << *it2 << " " << *it3 << "\n";
 }
 
-void testBasicIteratorConversion() {
+void testBidirectionIteratorSatisfied() {
     dynamicArray<int> arr{1, 2, 3};
-    // dynamicArray<int>::ConstIterator it = arr.begin();
-    // dynamicArray<int>::Iterator it = arr.cbegin(); should not work
+    static_assert(std::bidirectional_iterator<dynamicArray<int>::Iterator>);
+    // test pre decrement and post decrement
 }
 
 int main() {
@@ -325,7 +325,7 @@ int main() {
     // testBoolPushbackEmpty();
     // testBoolPushbackOneOffFullBucket();
 
-    testGenericIteratorSatisfiesForward();
-    // testBasicIteratorConversion();
+    // testGenericIteratorSatisfiesForward();
+    testBidirectionIteratorSatisfied();
     return 0;
 }
