@@ -276,16 +276,27 @@ void testBoolPushbackOneOffFullBucket() {
     std::cout << "capacity: " << a.capacity() << "\n";
 }
 
-// void testGenericIteratorTier() {
-//     static_assert(std::random_access_iterator<dynamicArray<int>::Iterator>);
-// }
+void testGenericIteratorSatisfiesForward() {
+    // static_assert(std::forward_iterator<dynamicArray<int>::Iterator>);
+    dynamicArray<int> arr{1, 2, 3};
+    auto it = arr.begin();
+    auto it2 = ++arr.begin();
+    // std::cout << *it++ << " " << *it << "\n";
+    // std::cout << (it == it2) << "\n";
+    std::cout << *it << " " << *it2 << "\n";
+    it = it2;
+    std::cout << *it << " " << *it2 << "\n";
+
+    dynamicArray<int>::IteratorImpl<false> it3;
+
+    it3 = it2;
+    std::cout << *it2 << " " << *it3 << "\n";
+}
 
 void testBasicIteratorConversion() {
     dynamicArray<int> arr{1, 2, 3};
-    dynamicArray<int>::ConstIterator it = arr.begin();
+    // dynamicArray<int>::ConstIterator it = arr.begin();
     // dynamicArray<int>::Iterator it = arr.cbegin(); should not work
-
-    std::cout << *it;
 }
 
 int main() {
@@ -314,7 +325,7 @@ int main() {
     // testBoolPushbackEmpty();
     // testBoolPushbackOneOffFullBucket();
 
-    // testGenericIteratorTier();
-    testBasicIteratorConversion();
+    testGenericIteratorSatisfiesForward();
+    // testBasicIteratorConversion();
     return 0;
 }
