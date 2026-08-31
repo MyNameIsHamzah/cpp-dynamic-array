@@ -1,4 +1,4 @@
-# Dynamic Array
+# Dynamic Array (NEED TO REVISIT!)
 
 A custom dynamic array implementation in C++, built from scratch as part of an ongoing C++ systems study.
 
