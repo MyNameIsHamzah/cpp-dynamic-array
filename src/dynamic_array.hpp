@@ -9,14 +9,16 @@
 #include <memory>
 #include <type_traits>
 
-template <typename T>
+template <typename T, typename Alloc = std::allocator<T>>
 class dynamicArray {
    private:
+    using AllocatorTraits = std::allocator_traits<Alloc>;
+    using pointer = typename AllocatorTraits::pointer;
+
     std::size_t m_size;
     std::size_t m_capacity;
-    std::unique_ptr<T[]> m_data;  // we must think about allocation here. this doesn't allow for
-                                  // reserve to be implmeented i think.
-                                  // friend class IteratorImpl;
+    pointer m_data;  // moving back to raw pointers for std allocator and allocator traits usage
+    [[no_unique_address]] Alloc m_alloc;
 
    public:
     template <bool isConst>
@@ -105,20 +107,30 @@ class dynamicArray {
 
     dynamicArray() : m_size(0), m_capacity(0), m_data(nullptr) {};  // default constructor
 
-    dynamicArray(
+    // size only constructor hmm if we pass a size only as a param do we allocate capcity or size?
+    explicit dynamicArray(std::size_t size)
+        : m_size(size), m_capacity(size), m_data(AllocatorTraits::allocate(m_alloc, m_capacity)) {
+        // surely its size?
+        AllocatorTraits::construct(m_alloc, m_data + m_size);
+    }
+
+    dynamicArray(                              // data only, size inferred
         const std::initializer_list<T>& list)  // overloaded constructor w/ default initialiser
-        : m_size(list.size()), m_capacity(list.size()), m_data(std::make_unique<T[]>(list.size())) {
+        : m_size(list.size()),
+          m_capacity(list.size()),
+          m_data(AllocatorTraits::allocate(m_alloc, m_capacity)) {
         std::size_t i{0};
         for (auto val : list) {
-            m_data[i++] = val;
+            AllocatorTraits::construct(m_alloc, m_data + i, val);  // not sure if this is right.
+            ++i;
         }
     }
 
     dynamicArray(const dynamicArray<T>& other)  // copy constructor
         : m_size(other.m_size),
           m_capacity(other.m_capacity),
-          m_data(std::make_unique<T[]>(other.m_capacity)) {
-        std::copy(other.m_data.get(), other.m_data.get() + other.m_size, m_data.get());
+          m_data(AllocatorTraits::allocate(m_alloc, other.m_capacity)) {
+        std::copy(other.m_data, other.m_data + other.m_size, m_data);
     }
 
     dynamicArray& operator=(const dynamicArray<T>& other) {  // copy assignment operator
