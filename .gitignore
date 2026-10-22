@@ -3,8 +3,9 @@ main
 *.out
 *.exe
 
-#ignore cmake builds
+#ignore cmake builds and cache
 build/
+.cache
 
 #ignore vscode settings
 .vscode/
