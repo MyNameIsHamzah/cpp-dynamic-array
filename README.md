@@ -18,32 +18,37 @@ After stepping away for a bit to focus on university commitments and coursework,
 ```
 cpp-dynamic-array/
 ├── src/
-│   ├── dynamic_array.hpp    # Core container & dynamicArray<bool> specialisation
-│   └── dynamic_array.cpp    # Test driver & verification functions
+│   ├── dynamic_array.hpp         # Core container & dynamicArray<bool> specialisation
+│   └── dynamic_array.cpp         # Demo executable
+├── tests/
+│   ├── test_lifecycle.cpp        # RAII, constructors, capacity, bounds checking
+│   ├── test_iterators.cpp        # Random access & contiguous iterators, std::ranges
+│   ├── test_bool.cpp             # Bit-packed specialization & proxy operations
+│   └── test_exception_safety.cpp # Strong exception safety guarantee tests
 ├── docs/
-│   └── DESIGN.md            # Detailed technical specs and invariants
+│   └── DESIGN.md                 # Detailed technical specs and invariants
 ├── CMakeLists.txt
 ├── .clang-format
 ├── .gitignore
 └── README.md
 ```
 
-## Build & Run
+## Build & Test
 
-Requires a C++20 compliant compiler (`clang++` or `g++`) and CMake 3.10+:
+Requires a C++20 compliant compiler (`clang++` or `g++`) and CMake 3.14+:
 
 ```bash
 mkdir -p build && cd build
-cmake ..
+cmake .. -DENABLE_ASAN=ON
 cmake --build .
+
+# Run demo executable
 ./dynamic_array
-```
 
-To run with AddressSanitizer and UndefinedBehaviorSanitizer:
-
-```bash
-clang++ -std=c++20 -Wall -Wextra -Wpedantic -fsanitize=address,undefined -Isrc src/dynamic_array.cpp -o build/asan_test
-./build/asan_test
+# Run Google Test suite via CTest
+ctest --output-on-failure
+# Or directly run the test binary:
+./unit_tests
 ```
 
 ## Status & What's Next
@@ -53,8 +58,6 @@ clang++ -std=c++20 -Wall -Wextra -Wpedantic -fsanitize=address,undefined -Isrc s
 - [x] Self-referential push_back safety and hot/cold split
 - [x] Random access & contiguous iterators for `dynamicArray<T>` (satisfying C++20 concepts)
 - [x] Random access iterators for `dynamicArray<bool>` proxy types
-- [ ] Migrate tests from ad-hoc `void` verification functions to Google Test
+- [x] Migrate tests from ad-hoc `void` verification functions to Google Test
 - [ ] Custom monotonic arena allocator driver
 - [ ] Google Benchmark suite comparing against `std::vector` and evaluating cache vs bitmask trade-offs
-
-*Note on current testing:* Tests in `src/dynamic_array.cpp` are currently structured as basic `void` test routines with assertion checks (tracking object lifetimes, simulated throw points, and memory leaks) to verify invariants while building out the core. Proper GTest integration is planned once iterators are in place.
