@@ -51,8 +51,8 @@ clang++ -std=c++20 -Wall -Wextra -Wpedantic -fsanitize=address,undefined -Isrc s
 - [x] 3-pointer layout and full allocator-aware RAII lifecycle
 - [x] Exception-safe capacity methods (`reserve`, `shrink_to_fit`, `resize`, `clear`, `pop_back`)
 - [x] Self-referential push_back safety and hot/cold split
-- [ ] Random access & contiguous iterators for `dynamicArray<T>` (satisfying C++20 concepts)
-- [ ] Random access iterators for `dynamicArray<bool>` proxy types
+- [x] Random access & contiguous iterators for `dynamicArray<T>` (satisfying C++20 concepts)
+- [x] Random access iterators for `dynamicArray<bool>` proxy types
 - [ ] Migrate tests from ad-hoc `void` verification functions to Google Test
 - [ ] Custom monotonic arena allocator driver
 - [ ] Google Benchmark suite comparing against `std::vector` and evaluating cache vs bitmask trade-offs
