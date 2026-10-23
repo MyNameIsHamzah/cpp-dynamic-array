@@ -213,28 +213,54 @@ void test_strong_exception_safety() {
 }
 
 void test_iterators_and_algorithms() {
-    std::cout << "[Test] Bidirectional Iterators & Traversal... ";
-    dynamicArray<int> arr{1, 2, 3, 4, 5};
+    std::cout << "[Test] Random Access & Contiguous Iterators... ";
 
-    // Forward iteration
-    int expected = 1;
-    for (auto it = arr.begin(); it != arr.end(); ++it) {
-        assert(*it == expected);
-        ++expected;
-    }
+    // Compile-time concept assertions
+    static_assert(std::random_access_iterator<dynamicArray<int>::Iterator>);
+    static_assert(std::contiguous_iterator<dynamicArray<int>::Iterator>);
+    static_assert(std::random_access_iterator<dynamicArray<int>::ConstIterator>);
+    static_assert(std::contiguous_iterator<dynamicArray<int>::ConstIterator>);
 
-    // Backward iteration (testing operator-- fix)
-    auto it = arr.end();
-    --it;
-    assert(*it == 5);
-    --it;
-    assert(*it == 4);
+    dynamicArray<int> arr{50, 20, 10, 40, 30};
 
-    // Const iteration
+    // Random access arithmetic
+    auto it = arr.begin();
+    assert(*it == 50);
+    assert(*(it + 2) == 10);
+    assert(*(2 + it) == 10);
+    it += 3;
+    assert(*it == 40);
+    it -= 2;
+    assert(*it == 20);
+    assert(it[2] == 40);
+
+    // Difference and comparisons
+    auto it_begin = arr.begin();
+    auto it_end = arr.end();
+    assert(it_end - it_begin == 5);
+    assert(it_begin < it_end);
+    assert(it_end > it_begin);
+    assert(it_begin <= it_begin);
+    assert(it_begin >= it_begin);
+
+    // Cross-const comparisons and arithmetic
     const auto& const_arr = arr;
     auto cit = const_arr.cbegin();
-    assert(*cit == 1);
-    assert(cit == const_arr.begin());
+    assert(it_begin == cit);
+    assert(cit < it_end);
+    assert(it_end - cit == 5);
+
+    // Contiguity verification (std::to_address matches buffer pointer)
+    assert(std::to_address(arr.begin()) == arr.data());
+
+    // Standard algorithms: std::sort and binary_search
+    std::sort(arr.begin(), arr.end());
+    assert(arr[0] == 10 && arr[1] == 20 && arr[2] == 30 && arr[3] == 40 && arr[4] == 50);
+    assert(std::binary_search(arr.begin(), arr.end(), 30));
+
+    // Ranges algorithms: std::ranges::reverse
+    std::ranges::reverse(arr);
+    assert(arr[0] == 50 && arr[1] == 40 && arr[2] == 30 && arr[3] == 20 && arr[4] == 10);
 
     std::cout << "PASSED\n";
 }

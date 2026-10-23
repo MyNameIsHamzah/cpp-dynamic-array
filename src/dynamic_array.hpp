@@ -107,7 +107,8 @@ class dynamicArray {
         friend class dynamicArray;
 
        public:
-        using iterator_category = std::bidirectional_iterator_tag;
+        using iterator_concept = std::contiguous_iterator_tag;
+        using iterator_category = std::random_access_iterator_tag;
         using value_type = T;
         using difference_type = std::ptrdiff_t;
         using reference = m_T&;
@@ -154,19 +155,51 @@ class dynamicArray {
             return temp;
         }
 
+        IteratorImpl& operator+=(difference_type n) noexcept {
+            m_ptr += n;
+            return *this;
+        }
+
+        IteratorImpl& operator-=(difference_type n) noexcept {
+            m_ptr -= n;
+            return *this;
+        }
+
+        IteratorImpl operator+(difference_type n) const noexcept { return IteratorImpl(m_ptr + n); }
+
+        friend IteratorImpl operator+(difference_type n, const IteratorImpl& it) noexcept {
+            return IteratorImpl(it.m_ptr + n);
+        }
+
+        IteratorImpl operator-(difference_type n) const noexcept { return IteratorImpl(m_ptr - n); }
+
+        template <bool otherConst>
+        difference_type operator-(const IteratorImpl<otherConst>& other) const noexcept {
+            return m_ptr - other.m_ptr;
+        }
+
+        reference operator[](difference_type n) const noexcept { return m_ptr[n]; }
+
         template <bool otherConst>
         bool operator==(const IteratorImpl<otherConst>& other) const noexcept {
             return m_ptr == other.m_ptr;
         }
 
         template <bool otherConst>
-        bool operator!=(const IteratorImpl<otherConst>& other) const noexcept {
-            return m_ptr != other.m_ptr;
+        auto operator<=>(const IteratorImpl<otherConst>& other) const noexcept {
+            return m_ptr <=> other.m_ptr;
         }
     };
 
     using Iterator = IteratorImpl<false>;
     using ConstIterator = IteratorImpl<true>;
+    using iterator = Iterator;
+    using const_iterator = ConstIterator;
+
+    static_assert(std::random_access_iterator<Iterator>);
+    static_assert(std::contiguous_iterator<Iterator>);
+    static_assert(std::random_access_iterator<ConstIterator>);
+    static_assert(std::contiguous_iterator<ConstIterator>);
 
     // Constructors & Destructor
     dynamicArray() noexcept(std::is_nothrow_default_constructible_v<Alloc>)
