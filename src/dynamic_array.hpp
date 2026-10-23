@@ -665,10 +665,17 @@ class dynamicArray<bool> {
     std::size_t m_count;
     std::size_t m_byteCapacity;
     std::unique_ptr<std::uint8_t[]> m_data;
-    static std::size_t calculateBucket(std::size_t globalIdx) { return globalIdx / 8; }
-    static std::uint8_t calculateByteIndex(std::size_t globalIdx) { return 1 << (globalIdx % 8); }
+
+    static std::size_t calculateBucket(std::size_t globalIdx) noexcept { return globalIdx / 8; }
+    static std::uint8_t calculateByteIndex(std::size_t globalIdx) noexcept {
+        return static_cast<std::uint8_t>(1 << (globalIdx % 8));
+    }
 
    public:
+    using value_type = bool;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+
     template <bool isConst>
     class ProxyImpl {
        private:
@@ -677,11 +684,19 @@ class dynamicArray<bool> {
         m_uint8_t* m_bytePtr;
         std::uint8_t m_bitMask;
 
+        friend class ProxyImpl<!isConst>;
+        friend class dynamicArray;
+
        public:
-        ProxyImpl(m_uint8_t* bytePtr, std::uint8_t bitMask)
+        ProxyImpl(m_uint8_t* bytePtr, std::uint8_t bitMask) noexcept
             : m_bytePtr{bytePtr}, m_bitMask{bitMask} {}
 
-        ProxyImpl& operator=(bool val)
+        template <bool otherConst>
+            requires(isConst && !otherConst)
+        ProxyImpl(const ProxyImpl<otherConst>& other) noexcept
+            : m_bytePtr{other.m_bytePtr}, m_bitMask{other.m_bitMask} {}
+
+        const ProxyImpl& operator=(bool val) const noexcept
             requires(!isConst)
         {
             if (val) {
@@ -691,15 +706,34 @@ class dynamicArray<bool> {
             }
             return *this;
         }
-        ProxyImpl& operator=(const ProxyImpl& other)
+
+        const ProxyImpl& operator=(const ProxyImpl& other) const noexcept
             requires(!isConst)
         {
             return *this = static_cast<bool>(other);
         }
+
         operator bool() const noexcept { return ((*m_bytePtr & m_bitMask) != 0); }
+
+        void flip() const noexcept
+            requires(!isConst)
+        {
+            *m_bytePtr ^= m_bitMask;
+        }
+
+        friend void swap(ProxyImpl a, ProxyImpl b) noexcept
+            requires(!isConst)
+        {
+            bool tmp = static_cast<bool>(a);
+            a = static_cast<bool>(b);
+            b = tmp;
+        }
     };
+
     using Proxy = ProxyImpl<false>;
     using ConstProxy = ProxyImpl<true>;
+    using reference = Proxy;
+    using const_reference = bool;
 
     template <bool isConst>
     class IteratorImpl {
@@ -707,41 +741,152 @@ class dynamicArray<bool> {
         using m_uint8_t = std::conditional_t<isConst, const std::uint8_t, std::uint8_t>;
         using m_proxy = std::conditional_t<isConst, ConstProxy, Proxy>;
 
-        m_uint8_t* m_bytePtr;
-        std::uint8_t m_bitMask;
+        m_uint8_t* m_bytePtr{nullptr};
+        std::uint8_t m_bitOffset{0};
+
+        friend class IteratorImpl<!isConst>;
+        friend class dynamicArray;
 
        public:
-        using iterator_category =
-            std::forward_iterator_tag;  // fthis is currenty lying. this is an input iterator tag
-                                        // pllus and random access on a seperat iterator_concept
+        // C++20 iterator taxonomy split:
+        // iterator_category is input_iterator_tag for legacy C++ compatibility
+        // (because reference is a proxy, not a true language reference bool&).
+        // iterator_concept is random_access_iterator_tag for C++20 concepts.
+        using iterator_concept = std::random_access_iterator_tag;
+        using iterator_category = std::input_iterator_tag;
         using value_type = bool;
         using difference_type = std::ptrdiff_t;
         using reference = m_proxy;
         using pointer = void;
 
-        IteratorImpl(m_uint8_t* bytePtr, std::uint8_t bitMask)
-            : m_bytePtr{bytePtr}, m_bitMask{bitMask} {}
-        m_proxy operator*() const { return m_proxy(m_bytePtr, m_bitMask); }
-        IteratorImpl operator++() {
-            m_bitMask <<= 1;
-            if (m_bitMask == 0) {
-                m_bitMask = 1;
-                m_bytePtr++;
+        IteratorImpl() noexcept : m_bytePtr(nullptr), m_bitOffset(0) {}
+
+        IteratorImpl(m_uint8_t* bytePtr, std::uint8_t bitOffset) noexcept
+            : m_bytePtr(bytePtr), m_bitOffset(bitOffset) {}
+
+        IteratorImpl(const IteratorImpl& other) noexcept
+            : m_bytePtr(other.m_bytePtr), m_bitOffset(other.m_bitOffset) {}
+
+        IteratorImpl& operator=(const IteratorImpl& other) noexcept {
+            m_bytePtr = other.m_bytePtr;
+            m_bitOffset = other.m_bitOffset;
+            return *this;
+        }
+
+        template <bool otherConst>
+            requires(isConst && !otherConst)
+        IteratorImpl(const IteratorImpl<otherConst>& other) noexcept
+            : m_bytePtr(other.m_bytePtr), m_bitOffset(other.m_bitOffset) {}
+
+        m_proxy operator*() const noexcept {
+            return m_proxy(m_bytePtr, static_cast<std::uint8_t>(1 << m_bitOffset));
+        }
+
+        reference operator[](difference_type n) const noexcept { return *(*this + n); }
+
+        IteratorImpl& operator++() noexcept {
+            if (m_bitOffset == 7) {
+                m_bitOffset = 0;
+                ++m_bytePtr;
+            } else {
+                ++m_bitOffset;
             }
             return *this;
         }
-        bool operator!=(const IteratorImpl& other) const {
-            return m_bytePtr != other.m_bytePtr || m_bitMask != other.m_bitMask;
+
+        IteratorImpl operator++(int) noexcept {
+            IteratorImpl temp = *this;
+            ++(*this);
+            return temp;
+        }
+
+        IteratorImpl& operator--() noexcept {
+            if (m_bitOffset == 0) {
+                m_bitOffset = 7;
+                --m_bytePtr;
+            } else {
+                --m_bitOffset;
+            }
+            return *this;
+        }
+
+        IteratorImpl operator--(int) noexcept {
+            IteratorImpl temp = *this;
+            --(*this);
+            return temp;
+        }
+
+        IteratorImpl& operator+=(difference_type n) noexcept {
+            difference_type total = static_cast<difference_type>(m_bitOffset) + n;
+            difference_type byte_offset = total / 8;
+            difference_type bit_rem = total % 8;
+            if (bit_rem < 0) {
+                bit_rem += 8;
+                byte_offset -= 1;
+            }
+            m_bytePtr += byte_offset;
+            m_bitOffset = static_cast<std::uint8_t>(bit_rem);
+            return *this;
+        }
+
+        IteratorImpl& operator-=(difference_type n) noexcept { return *this += (-n); }
+
+        IteratorImpl operator+(difference_type n) const noexcept {
+            IteratorImpl temp = *this;
+            temp += n;
+            return temp;
+        }
+
+        friend IteratorImpl operator+(difference_type n, const IteratorImpl& it) noexcept {
+            return it + n;
+        }
+
+        IteratorImpl operator-(difference_type n) const noexcept {
+            IteratorImpl temp = *this;
+            temp -= n;
+            return temp;
+        }
+
+        template <bool otherConst>
+        difference_type operator-(const IteratorImpl<otherConst>& other) const noexcept {
+            difference_type byte_diff = m_bytePtr - other.m_bytePtr;
+            difference_type bit_diff = static_cast<difference_type>(m_bitOffset) -
+                                       static_cast<difference_type>(other.m_bitOffset);
+            return byte_diff * 8 + bit_diff;
+        }
+
+        template <bool otherConst>
+        bool operator==(const IteratorImpl<otherConst>& other) const noexcept {
+            return m_bytePtr == other.m_bytePtr && m_bitOffset == other.m_bitOffset;
+        }
+
+        template <bool otherConst>
+        auto operator<=>(const IteratorImpl<otherConst>& other) const noexcept {
+            if (m_bytePtr != other.m_bytePtr) {
+                return m_bytePtr <=> other.m_bytePtr;
+            }
+            return m_bitOffset <=> other.m_bitOffset;
+        }
+
+        friend bool iter_move(const IteratorImpl& it) noexcept { return static_cast<bool>(*it); }
+
+        friend void iter_swap(const IteratorImpl& a, const IteratorImpl& b) noexcept
+            requires(!isConst)
+        {
+            bool tmp = *a;
+            *a = static_cast<bool>(*b);
+            *b = tmp;
         }
     };
 
     using Iterator = IteratorImpl<false>;
     using ConstIterator = IteratorImpl<true>;
+    using iterator = Iterator;
+    using const_iterator = ConstIterator;
 
-    dynamicArray() : m_count(0), m_byteCapacity(0), m_data(nullptr) {};  // default constructor
+    dynamicArray() : m_count(0), m_byteCapacity(0), m_data(nullptr) {};
 
-    dynamicArray(
-        const std::initializer_list<bool>& list)  // overloaded constructor w/ default initialiser
+    dynamicArray(const std::initializer_list<bool>& list)
         : m_count(list.size()),
           m_byteCapacity((list.size() + 7) / 8),
           m_data(std::make_unique<std::uint8_t[]>(m_byteCapacity)) {
@@ -754,7 +899,7 @@ class dynamicArray<bool> {
         }
     }
 
-    dynamicArray(const dynamicArray& other)  // copy constructor
+    dynamicArray(const dynamicArray& other)
         : m_count{other.m_count},
           m_byteCapacity{other.m_byteCapacity},
           m_data(std::make_unique<std::uint8_t[]>(m_byteCapacity)) {
@@ -795,8 +940,7 @@ class dynamicArray<bool> {
         return *this;
     }
 
-    void push_back(bool val) {  // i think the condition here may be testing the wrong question
-        // capacity reached logic
+    void push_back(bool val) {
         if ((calculateBucket(m_count) == m_byteCapacity - 1 && calculateByteIndex(m_count) & 128) ||
             (m_byteCapacity == 0 && m_count == 0)) {
             auto newCapacity = (m_byteCapacity == 0) ? 1 : m_byteCapacity * 2;
@@ -805,32 +949,56 @@ class dynamicArray<bool> {
             m_byteCapacity = newCapacity;
             m_data = std::move(temp);
         }
-        // insert logic
         if (val) {
             m_data[calculateBucket(m_count)] |= calculateByteIndex(m_count);
         }
         m_count++;
     }
-    std::size_t size() const { return m_count; }
-    std::size_t capacity() const { return m_byteCapacity; }
-    Iterator begin() { return Iterator(m_data.get(), calculateByteIndex(0)); }
-    Iterator end() {
-        return Iterator(m_data.get() + calculateBucket(m_count), calculateByteIndex(m_count));
-    }
-    ConstIterator cbegin() const { return ConstIterator(m_data.get(), calculateByteIndex(0)); }
-    ConstIterator cend() const {
-        return ConstIterator(m_data.get() + calculateBucket(m_count), calculateByteIndex(m_count));
-    }
-    ConstIterator begin() const { return ConstIterator(m_data.get(), calculateByteIndex(0)); }
-    ConstIterator end() const {
-        return ConstIterator(m_data.get() + calculateBucket(m_count), calculateByteIndex(m_count));
-    }
 
-    Proxy operator[](std::size_t globalIndex) {  // proxy pattern to enable indexing
+    [[nodiscard]] std::size_t size() const noexcept { return m_count; }
+    [[nodiscard]] std::size_t capacity() const noexcept { return m_byteCapacity * 8; }
+    [[nodiscard]] bool empty() const noexcept { return m_count == 0; }
+
+    [[nodiscard]] Iterator begin() noexcept { return Iterator(m_data.get(), 0); }
+    [[nodiscard]] Iterator end() noexcept {
+        return Iterator(m_data.get() + calculateBucket(m_count),
+                        static_cast<std::uint8_t>(m_count % 8));
+    }
+    [[nodiscard]] ConstIterator begin() const noexcept { return ConstIterator(m_data.get(), 0); }
+    [[nodiscard]] ConstIterator end() const noexcept {
+        return ConstIterator(m_data.get() + calculateBucket(m_count),
+                             static_cast<std::uint8_t>(m_count % 8));
+    }
+    [[nodiscard]] ConstIterator cbegin() const noexcept { return begin(); }
+    [[nodiscard]] ConstIterator cend() const noexcept { return end(); }
+
+    Proxy operator[](std::size_t globalIndex) noexcept {
         return Proxy(&m_data[calculateBucket(globalIndex)], calculateByteIndex(globalIndex));
     }
 
-    ConstProxy operator[](std::size_t globalIndex) const {  // proxy pattern to enable indexing
+    ConstProxy operator[](std::size_t globalIndex) const noexcept {
         return ConstProxy(&m_data[calculateBucket(globalIndex)], calculateByteIndex(globalIndex));
     }
 };
+
+namespace std {
+template <bool isConst, template <class> class TQual, template <class> class UQual>
+struct basic_common_reference<dynamicArray<bool>::ProxyImpl<isConst>, bool, TQual, UQual> {
+    using type = bool;
+};
+template <bool isConst, template <class> class TQual, template <class> class UQual>
+struct basic_common_reference<bool, dynamicArray<bool>::ProxyImpl<isConst>, TQual, UQual> {
+    using type = bool;
+};
+template <bool isConst>
+struct common_type<dynamicArray<bool>::ProxyImpl<isConst>, bool> {
+    using type = bool;
+};
+template <bool isConst>
+struct common_type<bool, dynamicArray<bool>::ProxyImpl<isConst>> {
+    using type = bool;
+};
+}  // namespace std
+
+static_assert(std::random_access_iterator<dynamicArray<bool>::Iterator>);
+static_assert(std::random_access_iterator<dynamicArray<bool>::ConstIterator>);

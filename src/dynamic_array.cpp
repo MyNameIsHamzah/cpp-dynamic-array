@@ -290,28 +290,78 @@ void test_capacity_operations() {
     std::cout << "PASSED\n";
 }
 
-void test_bool_specialization_smoke() {
-    std::cout << "[Test] dynamicArray<bool> basic verification... ";
-    dynamicArray<bool> barr{true, false, true, true};
-    assert(barr.size() == 4);
+void test_bool_specialization_and_iterators() {
+    std::cout << "[Test] dynamicArray<bool> Random Access Iterators & Algorithms... ";
+
+    static_assert(std::random_access_iterator<dynamicArray<bool>::Iterator>);
+    static_assert(std::random_access_iterator<dynamicArray<bool>::ConstIterator>);
+
+    // Create 19 elements (spans 3 bytes: 8 + 8 + 3)
+    dynamicArray<bool> barr{
+        true, false, true,  true, false, false, true, false,  // byte 0
+        true, true,  false, true, false, true,  true, false,  // byte 1
+        true, false, true                                     // byte 2
+    };
+    assert(barr.size() == 19);
+
+    // Subscript access
     assert(barr[0] == true);
     assert(barr[1] == false);
-    assert(barr[2] == true);
-    assert(barr[3] == true);
+    assert(barr[8] == true);
+    assert(barr[18] == true);
 
-    barr[1] = true;
-    assert(barr[1] == true);
+    // Random access arithmetic across byte boundaries
+    auto it = barr.begin();
+    assert(*it == true);
+    assert(*(it + 1) == false);
+    assert(*(it + 8) == true);
+    assert(*(it + 18) == true);
 
-    barr.push_back(false);
-    assert(barr.size() == 5);
-    assert(barr[4] == false);
+    it += 10;  // byte 1, bit 2
+    assert(*it == false);
+    it -= 2;  // byte 1, bit 0
+    assert(*it == true);
+
+    // Difference and comparisons
+    auto it_begin = barr.begin();
+    auto it_end = barr.end();
+    assert(it_end - it_begin == 19);
+    assert(it_begin < it_end);
+    assert(it_end > it_begin);
+    assert(it_begin[8] == true);
+
+    // Proxy mutation through iterator
+    *it_begin = false;
+    assert(barr[0] == false);
+    *it_begin = true;
+    assert(barr[0] == true);
+
+    // Standard algorithms: std::count, std::find
+    auto true_count = std::count(barr.begin(), barr.end(), true);
+    assert(true_count == 11);
+
+    auto found = std::find(barr.begin(), barr.end(), false);
+    assert(found != barr.end());
+    assert(found - barr.begin() == 1);
+
+    // Reverse with std::ranges::reverse
+    // Note: Legacy std::reverse dispatches on iterator_category (which is input_iterator_tag due to
+    // proxy references), whereas C++20 std::ranges::reverse correctly dispatches on
+    // iterator_concept (std::random_access_iterator_tag)!
+    dynamicArray<bool> palindromic{true, false, true, false, true};
+    std::ranges::reverse(palindromic);
+    assert(palindromic[0] == true);
+    assert(palindromic[1] == false);
+    assert(palindromic[2] == true);
+    assert(palindromic[3] == false);
+    assert(palindromic[4] == true);
 
     std::cout << "PASSED\n";
 }
 
 int main() {
     std::cout << "========================================\n";
-    std::cout << "  dynamicArray Milestone 1 Verification \n";
+    std::cout << "  dynamicArray Milestone 2 Verification \n";
     std::cout << "========================================\n";
 
     test_constructors_and_raii();
@@ -321,8 +371,8 @@ int main() {
     test_strong_exception_safety();
     test_iterators_and_algorithms();
     test_capacity_operations();
-    test_bool_specialization_smoke();
+    test_bool_specialization_and_iterators();
 
-    std::cout << "\nALL MILESTONE 1 CHECKS PASSED PERFECTLY!\n";
+    std::cout << "\nALL MILESTONE 2 CHECKS PASSED PERFECTLY!\n";
     return 0;
 }
