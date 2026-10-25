@@ -4,6 +4,11 @@ project(cpp-dynamic-array VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Default to Release mode if not specified (crucial for microbenchmarks)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
+endif()
+
 # Compiler warnings
 add_compile_options(-Wall -Wextra -Wpedantic)
 
@@ -51,4 +56,28 @@ if(BUILD_TESTS)
 
     include(GoogleTest)
     gtest_discover_tests(unit_tests)
+endif()
+
+# ---------------------------------------------------------
+# Benchmarking with Google Benchmark
+# ---------------------------------------------------------
+option(BUILD_BENCHMARKS "Build performance benchmark suite" ON)
+
+if(BUILD_BENCHMARKS)
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_WERROR OFF CACHE BOOL "" FORCE)
+
+    include(FetchContent)
+    FetchContent_Declare(
+        googlebenchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG v1.8.4
+    )
+    FetchContent_MakeAvailable(googlebenchmark)
+
+    add_executable(benchmark_suite
+        benchmarks/bench_main.cpp
+    )
+    target_link_libraries(benchmark_suite PRIVATE dynamic_array_lib benchmark::benchmark_main)
 endif()

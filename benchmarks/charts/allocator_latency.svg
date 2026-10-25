@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="100%" height="100%">
+<rect width="800" height="480" fill="#0d1117" rx="8" />
+<text x="80" y="35" fill="#f0f6fc" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600">Memory Model: Heap Allocator vs Monotonic Arena</text>
+<text x="360.0" y="465" fill="#8b949e" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle">Elements Allocated Per Cycle</text>
+<text x="25" y="240.0" fill="#8b949e" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle" transform="rotate(-90 25 240.0)">Cycle Time (ns)</text>
+<line x1="80" y1="420" x2="640" y2="420" stroke="#30363d" stroke-width="1"/>
+<line x1="80" y1="60" x2="80" y2="420" stroke="#30363d" stroke-width="1"/>
+<polyline points="80.0,386.9 266.7,288.5 453.3,178.6 640.0,60.0" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>
+<circle cx="80.0" cy="386.9" r="4" fill="#2563eb"/>
+<circle cx="266.7" cy="288.5" r="4" fill="#2563eb"/>
+<circle cx="453.3" cy="178.6" r="4" fill="#2563eb"/>
+<circle cx="640.0" cy="60.0" r="4" fill="#2563eb"/>
+<circle cx="660" cy="70" r="5" fill="#2563eb"/>
+<text x="672" y="74" fill="#c9d1d9" font-family="system-ui, sans-serif" font-size="11">std::allocator (Heap)</text>
+<polyline points="80.0,420.0 266.7,303.7 453.3,184.2 640.0,63.3" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linejoin="round"/>
+<circle cx="80.0" cy="420.0" r="4" fill="#dc2626"/>
+<circle cx="266.7" cy="303.7" r="4" fill="#dc2626"/>
+<circle cx="453.3" cy="184.2" r="4" fill="#dc2626"/>
+<circle cx="640.0" cy="63.3" r="4" fill="#dc2626"/>
+<circle cx="660" cy="94" r="5" fill="#dc2626"/>
+<text x="672" y="98" fill="#c9d1d9" font-family="system-ui, sans-serif" font-size="11">ArenaAllocator (0-Syscall Bump)</text>
+</svg>

@@ -28,6 +28,13 @@ cpp-dynamic-array/
 │   ├── test_bool.cpp             # Bit-packed specialization & proxy operations
 │   ├── test_exception_safety.cpp # Strong exception safety guarantee tests
 │   └── test_arena_allocator.cpp  # Arena bump allocator & over-aligned tests
+├── benchmarks/
+│   ├── bench_main.cpp            # Google Benchmark suite (throughput, arena, bool)
+│   ├── BENCHMARK_RESULTS.md      # Detailed benchmark metrics and tables
+│   └── charts/                   # Vector SVG performance curves
+├── scripts/
+│   ├── cirrus_bench.slurm        # Slurm job runner for pinned core runs on Cirrus HPC
+│   └── plot_benchmarks.py        # Standalone SVG & Markdown reporting script
 ├── docs/
 │   └── DESIGN.md                 # Detailed technical specs and invariants
 ├── CMakeLists.txt
@@ -36,25 +43,54 @@ cpp-dynamic-array/
 └── README.md
 ```
 
-## Build & Test
+## Build, Test & Benchmark
 
 Requires a C++20 compliant compiler (`clang++` or `g++`) and CMake 3.14+:
 
 ```bash
 mkdir -p build && cd build
-cmake .. -DENABLE_ASAN=ON
+
+# 1. Debug build with AddressSanitizer & UB Sanitizer:
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_ASAN=ON
 cmake --build .
+ctest --output-on-failure # Runs Google Test suite
 
-# Run demo executable
-./dynamic_array
+# 2. Release build for performance benchmarking:
+cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_ASAN=OFF -DBUILD_BENCHMARKS=ON
+cmake --build . --target benchmark_suite
 
-# Run Google Test suite via CTest
-ctest --output-on-failure
-# Or directly run the test binary:
-./unit_tests
+# Run benchmarks locally and export JSON:
+./benchmark_suite --benchmark_out=../benchmark_results.json --benchmark_out_format=json
+python3 ../scripts/plot_benchmarks.py ../benchmark_results.json
 ```
 
-## Status & What's Next
+### Reproducible Profiling on Cirrus HPC (Slurm)
+To eliminate operating system jitter, context switches, and CPU frequency throttling noise, benchmarks can be submitted to a dedicated, core-pinned node on the **Cirrus supercomputing cluster**:
+```bash
+sbatch scripts/cirrus_bench.slurm
+```
+
+## Performance & Benchmark Findings
+
+Full numbers and analysis available in [benchmarks/BENCHMARK_RESULTS.md](benchmarks/BENCHMARK_RESULTS.md).
+
+### 1. PushBack Throughput: dynamicArray vs std::vector
+![Throughput](benchmarks/charts/throughput_comparison.svg)
+
+- **Iteration speed**: `dynamicArray` clocks **~30 GB/s** sequential read bandwidth, matching and slightly exceeding `std::vector` thanks to direct pointer comparisons in the 3-pointer layout.
+- **Sorting**: `std::sort` on `dynamicArray` matches `std::vector` (5.01 µs vs 5.08 µs at 1,024 elements), validating contiguous random-access iterator performance.
+
+### 2. Allocator Impact: Heap malloc vs Monotonic Arena
+![Allocator Latency](benchmarks/charts/allocator_latency.svg)
+
+- **Zero-Syscall Latency Win**: Backing `dynamicArray` with `ArenaAllocator` yields up to **1.46x faster** allocation cycles over standard `malloc`/`free` heap allocations by avoiding kernel locking and fragmentation.
+
+### 3. The Boolean Specialization Crossover
+![Boolean Crossover](benchmarks/charts/bool_crossover.svg)
+
+- Demonstrates the trade-off between instruction count and memory bandwidth: 1-byte storage wins in tiny L1 working sets due to zero bit-masking ALU overhead, while bit-packed storage halves memory bus traffic at scale.
+
+## Status
 
 - [x] 3-pointer layout and full allocator-aware RAII lifecycle
 - [x] Exception-safe capacity methods (`reserve`, `shrink_to_fit`, `resize`, `clear`, `pop_back`)
@@ -63,4 +99,4 @@ ctest --output-on-failure
 - [x] Random access iterators for `dynamicArray<bool>` proxy types
 - [x] Migrate tests from ad-hoc `void` verification functions to Google Test
 - [x] Custom monotonic arena allocator driver
-- [ ] Google Benchmark suite comparing against `std::vector` and evaluating cache vs bitmask trade-offs
+- [x] Google Benchmark suite comparing against `std::vector` and evaluating cache vs bitmask trade-offs
