@@ -11,6 +11,7 @@ After stepping away for a bit to focus on university commitments and coursework,
 - **Allocator-aware RAII**: All allocation, deallocation, object construction, and destruction are handled via `std::allocator_traits` with zero-overhead stateless allocators using `[[no_unique_address]]`.
 - **Strong exception safety & self-reference safety**: Reallocation constructs the incoming element in the new buffer before relocating existing elements. This cleanly avoids use-after-free bugs if an element is pushed into itself (e.g. `vec.push_back(vec[0])`), and utilises `std::is_nothrow_move_constructible_v` so containers are never corrupted if an operation throws.
 - **Hot/cold code splitting**: The growth and reallocation slow path is isolated in a `[[gnu::noinline]]` helper to keep the `emplace_back` fast-path tight and cache-friendly.
+- **Custom monotonic arena allocator**: Implemented `Arena` and standard-compliant `ArenaAllocator<T>` to provide O(1) deterministic, zero-syscall bump allocations with instant block resets for latency-sensitive paths.
 - **Bit-packed boolean specialisation**: Initial implementation of `dynamicArray<bool>` using bit-masking and a proxy reference class to pack 8 booleans into a single byte.
 
 ## Project Structure
@@ -19,12 +20,14 @@ After stepping away for a bit to focus on university commitments and coursework,
 cpp-dynamic-array/
 ├── src/
 │   ├── dynamic_array.hpp         # Core container & dynamicArray<bool> specialisation
+│   ├── arena_allocator.hpp       # Monotonic bump allocator & ArenaAllocator<T>
 │   └── dynamic_array.cpp         # Demo executable
 ├── tests/
 │   ├── test_lifecycle.cpp        # RAII, constructors, capacity, bounds checking
 │   ├── test_iterators.cpp        # Random access & contiguous iterators, std::ranges
 │   ├── test_bool.cpp             # Bit-packed specialization & proxy operations
-│   └── test_exception_safety.cpp # Strong exception safety guarantee tests
+│   ├── test_exception_safety.cpp # Strong exception safety guarantee tests
+│   └── test_arena_allocator.cpp  # Arena bump allocator & over-aligned tests
 ├── docs/
 │   └── DESIGN.md                 # Detailed technical specs and invariants
 ├── CMakeLists.txt
@@ -59,5 +62,5 @@ ctest --output-on-failure
 - [x] Random access & contiguous iterators for `dynamicArray<T>` (satisfying C++20 concepts)
 - [x] Random access iterators for `dynamicArray<bool>` proxy types
 - [x] Migrate tests from ad-hoc `void` verification functions to Google Test
-- [ ] Custom monotonic arena allocator driver
+- [x] Custom monotonic arena allocator driver
 - [ ] Google Benchmark suite comparing against `std::vector` and evaluating cache vs bitmask trade-offs

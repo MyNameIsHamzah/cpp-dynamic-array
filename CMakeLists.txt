@@ -45,6 +45,7 @@ if(BUILD_TESTS)
         tests/test_iterators.cpp
         tests/test_bool.cpp
         tests/test_exception_safety.cpp
+        tests/test_arena_allocator.cpp
     )
     target_link_libraries(unit_tests PRIVATE dynamic_array_lib GTest::gtest_main)
 
