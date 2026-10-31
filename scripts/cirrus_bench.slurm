@@ -6,11 +6,14 @@
 # OS context switches, and CPU frequency scaling noise for HFT profiling.
 # ==============================================================================
 #SBATCH --job-name=dynamic_array_bench
-#SBATCH --time=00:20:00
+#SBATCH --time=0:10:0
+#SBATCH --exclusive
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
-#SBATCH --cpus-per-task=1
-#SBATCH --exclusive
+#SBATCH --cpus-per-task=288
+#SBATCH --account=m26oc-s2970152
+#SBATCH --partition=standard
+#SBATCH --qos=short
 #SBATCH --output=benchmark_job_%j.out
 #SBATCH --error=benchmark_job_%j.err
 
