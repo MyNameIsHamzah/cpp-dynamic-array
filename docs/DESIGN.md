@@ -152,5 +152,19 @@ exception propagates out of one.
 9. Reallocation invalidates all iterators, pointers and references, `pop_back/clear` invalidates those at or past the erased elements. `reserve(n)` where `n <= capacity()` must not invalidate resources
 10. For `<bool>` - `m_count <= m_byteCapacity * 8` and all bits in range `[m_count, m_byteCapacity * 8)` are 0
 
-## Design decisions & rationale 
-— will add to this as i go
+## Design decisions & rationale
+
+1. **3-Pointer Layout over `pointer + size + capacity`**:
+   - Stores `m_begin`, `m_end`, and `m_cap`. `end()` becomes a direct pointer load rather than `m_begin + m_size`. `push_back` capacity validation is a single pointer comparison (`m_end == m_cap`) with zero offset arithmetic.
+
+2. **1.5x Geometric Growth Factor**:
+   - With 2.0x growth, the sum of all previously freed buffers is strictly less than the next request ($\sum_{k=0}^{n-1} 2^k = 2^n - 1 < 2^n$), making memory chunk reuse impossible. A 1.5x growth factor allows allocators to eventually recycle previously freed memory blocks.
+
+3. **Hot/Cold Reallocation Splitting**:
+   - Isolated growth and buffer reallocation into a private `[[gnu::noinline]]` helper. This keeps the common inline fast path (`m_end < m_cap`) small and tight, minimizing CPU instruction cache (I-cache) footprint.
+
+4. **Self-Referential `push_back` Safety**:
+   - When expanding capacity, the new element is constructed in the destination buffer *before* relocating existing elements. This cleanly avoids use-after-free bugs on self-appends (e.g. `arr.push_back(arr[0])`).
+
+5. **Boolean Iterator Taxonomy Split**:
+   - Bit-packed booleans cannot return a genuine `bool&` reference. To satisfy C++20 iterator concepts, the iterator defines `iterator_category = std::input_iterator_tag` for legacy pre-C++20 algorithms while satisfying `iterator_concept = std::random_access_iterator_tag` with proxy references.
