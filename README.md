@@ -91,7 +91,10 @@ cmake --build . --target benchmark_suite
 python3 ../scripts/plot_benchmarks.py ../benchmark_results.json
 ```
 
-To submit a batch run on Cirrus Slurm:
+### Cluster Profiling on Cirrus HPC (Slurm)
+
+`scripts/cirrus_bench.slurm` is a reference batch job runner for core-pinned execution on Slurm clusters. If submitting on your own cluster account, configure your allocation budget code (`#SBATCH --account=<your-account-id>`) in the script before running:
+
 ```bash
 sbatch scripts/cirrus_bench.slurm
 ```

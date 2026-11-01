@@ -11,7 +11,7 @@
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=288
-#SBATCH --account=m26oc-s2970152
+#SBATCH --account=<your-account-id> # Replace with your Cirrus allocation account code
 #SBATCH --partition=standard
 #SBATCH --qos=short
 #SBATCH --output=benchmark_job_%j.out
