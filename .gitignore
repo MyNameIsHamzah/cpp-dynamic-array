@@ -5,7 +5,11 @@ main
 
 #ignore cmake builds and cache
 build/
+build_bench/
+
 .cache
+*.err
+*.out
 
 #ignore vscode settings
 .vscode/
