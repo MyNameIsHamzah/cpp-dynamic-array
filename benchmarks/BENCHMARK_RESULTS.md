@@ -1,6 +1,6 @@
 # Cirrus HPC Benchmark Results & Performance Analysis
 
-Benchmarked on a dedicated compute node (`cs-n0004`, 576 CPUs, 3.75 GHz, 32 MB L3 Cache) on the **Cirrus Supercomputer (EPCC)**. Pinned to core 0 via `taskset` to eliminate thread scheduling jitter and frequency scaling noise.
+Benchmarked on an exclusive **Cirrus HPC** dual-socket **AMD EPYC 9825** compute node (`cs-n0004`; 288 physical cores / 576 SMT threads @ 3.71 GHz max boost, NPS4 NUMA topology). Pinned to a single physical core (`core 0`) via `taskset -c 0` within an isolated 12-core CCD (48 KiB L1d, 1 MiB L2, 32 MiB local L3 slice) to eliminate cross-CCD infinity fabric latency, SMT contention, and OS scheduling jitter.
 
 ## 1. Container PushBack Throughput (Time per full sequence)
 
