@@ -1,93 +1,97 @@
 # dynamicArray
 
-A custom, low-level dynamic array implementation in modern C++20, built from the ground up to explore manual memory management, pointer arithmetic, allocator awareness, and hardware-sympathetic container design.
+A low-latency, allocator-aware C++20 dynamic array container built with mechanical sympathy, custom monotonic arena memory management, and a bit-packed boolean specialization.
 
-## Overview
+---
 
-I started this project as a deep dive into how `std::vector` actually operates under the hood, particularly in latency-critical systems (e.g. trading and low-latency infrastructure). 
+## Quick API Overview
 
-After stepping away for a bit to focus on university commitments and coursework, I've jumped back in to revamp the memory model and container internals:
-- **3-pointer memory layout**: Swapped out the traditional `pointer + size + capacity` layout for three pointers (`m_begin`, `m_end`, `m_cap`). `end()` is a single pointer load, and the `push_back` capacity check is a single pointer compare.
-- **Allocator-aware RAII**: All allocation, deallocation, object construction, and destruction are handled via `std::allocator_traits` with zero-overhead stateless allocators using `[[no_unique_address]]`.
-- **Strong exception safety & self-reference safety**: Reallocation constructs the incoming element in the new buffer before relocating existing elements. This cleanly avoids use-after-free bugs if an element is pushed into itself (e.g. `vec.push_back(vec[0])`), and utilises `std::is_nothrow_move_constructible_v` so containers are never corrupted if an operation throws.
-- **Hot/cold code splitting**: The growth and reallocation slow path is isolated in a `[[gnu::noinline]]` helper to keep the `emplace_back` fast-path tight and cache-friendly.
-- **Custom monotonic arena allocator**: Implemented `Arena` and standard-compliant `ArenaAllocator<T>` to provide O(1) deterministic, zero-syscall bump allocations with instant block resets for latency-sensitive paths.
-- **Bit-packed boolean specialisation**: Initial implementation of `dynamicArray<bool>` using bit-masking and a proxy reference class to pack 8 booleans into a single byte.
+```cpp
+#include "dynamic_array.hpp"
+#include "arena_allocator.hpp"
+#include <algorithm>
+#include <iostream>
 
-## Project Structure
+int main() {
+    // 1. Standard Contiguous Container (3-pointer layout)
+    dynamicArray<int> arr;
+    arr.reserve(1024);
+    arr.push_back(42);
+    arr.emplace_back(17);
+    std::ranges::sort(arr); // Satisfies std::contiguous_iterator
 
-```
-cpp-dynamic-array/
-├── src/
-│   ├── dynamic_array.hpp         # Core container & dynamicArray<bool> specialisation
-│   ├── arena_allocator.hpp       # Monotonic bump allocator & ArenaAllocator<T>
-│   └── dynamic_array.cpp         # Demo executable
-├── tests/
-│   ├── test_lifecycle.cpp        # RAII, constructors, capacity, bounds checking
-│   ├── test_iterators.cpp        # Random access & contiguous iterators, std::ranges
-│   ├── test_bool.cpp             # Bit-packed specialization & proxy operations
-│   ├── test_exception_safety.cpp # Strong exception safety guarantee tests
-│   └── test_arena_allocator.cpp  # Arena bump allocator & over-aligned tests
-├── benchmarks/
-│   ├── bench_main.cpp            # Google Benchmark suite (throughput, arena, bool)
-│   ├── BENCHMARK_RESULTS.md      # Detailed benchmark metrics and tables
-│   └── charts/                   # Vector PDF performance charts
-├── scripts/
-│   ├── cirrus_bench.slurm        # Slurm job runner for pinned core runs on Cirrus HPC
-│   └── plot_benchmarks.py        # Standalone PDF & Markdown reporting script
-├── docs/
-│   └── DESIGN.md                 # Detailed technical specs and invariants
-├── CMakeLists.txt
-├── .clang-format
-├── .gitignore
-└── README.md
+    // 2. Zero-Syscall Bump Allocator (Low-latency order lifecycles)
+    Arena arena(64 * 1024); // 64 KB pre-allocated arena buffer
+    dynamicArray<int, ArenaAllocator<int>> fast_arr{ArenaAllocator<int>(&arena)};
+    for (int i = 0; i < 100; ++i) fast_arr.push_back(i);
+    arena.reset(); // O(1) instant reset, zero kernel free() syscalls
+
+    // 3. Bit-Packed Boolean Specialization (8x memory compression)
+    dynamicArray<bool> flags;
+    flags.push_back(true);
+    flags.push_back(false);
+    flags[1].flip(); // Proxy reference bit manipulation
+}
 ```
 
-## Build, Test & Benchmark
+---
 
-Requires a C++20 compliant compiler (`clang++` or `g++`) and CMake 3.14+:
+## Architectural Highlights
+
+* **3-Pointer Layout (`m_begin`, `m_end`, `m_cap`)**: Replaces the classic `pointer + size + capacity` struct. `end()` is a single pointer load, and the capacity check on `push_back` is a single pointer comparison with zero arithmetic.
+* **Allocator-Aware RAII (`std::allocator_traits`)**: Completely decouples raw memory allocation from object construction (placement `new`) and destruction. Uses `[[no_unique_address]]` for zero-overhead with stateless allocators.
+* **Strong Exception Safety**: During geometric reallocation, new elements are constructed in the new buffer *before* relocating existing elements. This eliminates corruption if constructors throw and safely handles self-referential appends (`arr.push_back(arr[0])`).
+* **Hot/Cold Growth Path Splitting**: Inlines the common `push_back` / `emplace_back` fast path while marking the slow reallocation path `[[gnu::noinline]]` to keep CPU instruction cache footprint minimal.
+* **C++20 Contiguous & Random-Access Iterators**: Modeled as raw pointer wrappers satisfying `std::contiguous_iterator` and `std::random_access_iterator`, unlocking full compiler auto-vectorization and SIMD loop unrolling.
+* **Bit-Packed `dynamicArray<bool>`**: Packs 8 booleans per byte using proxy references with a const/non-const taxonomy split, retaining STL random-access iterator compatibility.
+* **Monotonic `ArenaAllocator`**: A 64-byte aligned, deterministic bump allocator with $O(1)$ block resets, designed for bursty lifecycles without OS kernel memory locks.
+
+---
+
+## Performance & Benchmark Findings (EPCC Cirrus Supercomputer)
+
+All benchmarks were compiled with `GCC 12.2 -O3 -march=native` and executed on a dedicated compute node (`cs-n0004`, 3.75 GHz, 32 MB L3 cache) on the **Cirrus HPC Cluster**, pinned to an isolated physical core (`taskset -c 0`) to eliminate OS scheduling jitter and frequency scaling noise.
+
+### Benchmark Charts (PDF)
+
+* **[PushBack Throughput Chart (PDF)](benchmarks/charts/throughput_comparison.pdf)** — Geometric growth vs reserved pre-allocation across $N = 64$ to $10^6$ elements.
+* **[Allocator Latency Chart (PDF)](benchmarks/charts/allocator_latency.pdf)** — Cycle latency comparison: `std::allocator` (`malloc`/`free`) vs `ArenaAllocator`.
+* **[Boolean Traversal Scan Chart (PDF)](benchmarks/charts/bool_crossover.pdf)** — Memory bandwidth vs bit-masking ALU trade-offs across byte and bit-packed layouts.
+* **[Algorithms & Iteration Chart (PDF)](benchmarks/charts/algorithms_comparison.pdf)** — Sequential iteration and `std::sort` validation against `libstdc++`.
+
+### Key Trade-Off Takeaways
+
+* **Zero-Cost Abstraction Parity**: Sequential scans and `std::sort` match `std::vector` down to **<0.2% variance** across $10^6$ elements ($280.3\ \mu\text{s}$ vs $279.9\ \mu\text{s}$), validating that custom contiguous iterators lower directly to raw pointer arithmetic.
+* **Burst Allocator Speedup**: Backing `dynamicArray` with `ArenaAllocator` cuts allocation latency by **41% (1.7x speedup)** over `malloc`/`free` at 64 pushes ($61.4\text{ ns}$ vs $105.4\text{ ns}$) by eliminating kernel heap locks and metadata tracking.
+* **Boolean Memory vs ALU Trade-off**: `dynamicArray<bool>` compresses memory footprint by **8x**, but bit-shift/mask operations (`(word >> bit) & 1`) make byte-aligned `uint8_t` arrays **1.6x–2.3x faster** for in-cache sequential scans ($1.12\text{ ms}$ vs $1.74\text{ ms}$ at $4\text{M}$ elements).
+* **Page Fault Boundary**: Under geometric growth, `std::vector` exhibits a steep latency jump approaching $N = 10^6$ as allocation exceeds `glibc`'s `MMAP_THRESHOLD`, triggering kernel `mmap` page allocations and minor page faults.
+
+> Full timing metrics and speedup multipliers are documented in [benchmarks/BENCHMARK_RESULTS.md](benchmarks/BENCHMARK_RESULTS.md).
+
+---
+
+## Build, Test & Profile
+
+Requires C++20 (`clang++` or `g++`) and CMake 3.14+:
 
 ```bash
 mkdir -p build && cd build
 
-# 1. Debug build with AddressSanitizer & UB Sanitizer:
+# 1. Debug build with AddressSanitizer & UB Sanitizer (32 Google Tests)
 cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_ASAN=ON
 cmake --build .
-ctest --output-on-failure # Runs Google Test suite
+ctest --output-on-failure
 
-# 2. Release build for performance benchmarking:
+# 2. Release build with Google Benchmark
 cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_ASAN=OFF -DBUILD_BENCHMARKS=ON
 cmake --build . --target benchmark_suite
 
-# Run benchmarks locally and export JSON:
+# Run benchmarks and generate PDF plots
 ./benchmark_suite --benchmark_out=../benchmark_results.json --benchmark_out_format=json
 python3 ../scripts/plot_benchmarks.py ../benchmark_results.json
 ```
 
-### Reproducible Profiling on Cirrus HPC (Slurm)
-To eliminate operating system jitter, context switches, and CPU frequency throttling noise, benchmarks can be submitted to a dedicated, core-pinned node on the **Cirrus supercomputing cluster**:
+To submit a batch run on Cirrus Slurm:
 ```bash
 sbatch scripts/cirrus_bench.slurm
 ```
-
-## Performance & Benchmark Findings
-
-Detailed metrics, tables, and speedup multipliers are available in [benchmarks/BENCHMARK_RESULTS.md](benchmarks/BENCHMARK_RESULTS.md).
-
-All performance curves are generated as standalone vector PDF documents in `benchmarks/charts/`:
-
-- **[PushBack Throughput Chart (PDF)](benchmarks/charts/throughput_comparison.pdf)**: `dynamicArray` vs `std::vector` (geometric growth and reserved pre-allocation). Outperforms `std::vector` at small working sets ($N \le 1,024$) and large buffers ($N = 1,048,576$).
-- **[Allocator Latency Chart (PDF)](benchmarks/charts/allocator_latency.pdf)**: Demonstrates up to **1.72x speedup** (42% latency reduction) when backing `dynamicArray` with `ArenaAllocator` compared to `std::allocator` (`malloc`/`free`) by eliminating kernel syscalls and memory fragmentation.
-- **[Boolean Traversal Scan Chart (PDF)](benchmarks/charts/bool_crossover.pdf)**: Evaluates memory bandwidth vs bitmasking instruction overhead across `dynamicArray<uint8_t>`, bit-packed `dynamicArray<bool>`, and `std::vector<bool>`.
-- **[Algorithms & Iteration Chart (PDF)](benchmarks/charts/algorithms_comparison.pdf)**: Sequential iteration and `std::sort` throughput, demonstrating 1:1 parity with `std::vector` and validating contiguous random access iterator efficiency.
-
-## Status
-
-- [x] 3-pointer layout and full allocator-aware RAII lifecycle
-- [x] Exception-safe capacity methods (`reserve`, `shrink_to_fit`, `resize`, `clear`, `pop_back`)
-- [x] Self-referential push_back safety and hot/cold split
-- [x] Random access & contiguous iterators for `dynamicArray<T>` (satisfying C++20 concepts)
-- [x] Random access iterators for `dynamicArray<bool>` proxy types
-- [x] Migrate tests from ad-hoc `void` verification functions to Google Test
-- [x] Custom monotonic arena allocator driver
-- [x] Google Benchmark suite comparing against `std::vector` and evaluating cache vs bitmask trade-offs
