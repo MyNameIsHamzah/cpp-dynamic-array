@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-Publication-quality benchmark plotting and summary reporting script for dynamicArray.
+Publication-quality PDF benchmark plotting and summary reporting script for dynamicArray.
 Generates:
-1. High-resolution vector SVGs with white backgrounds, clear axes, ticks, and numeric scales.
-2. High-DPI PNGs if matplotlib is available.
-3. Formatted Markdown summary tables with exact numbers and speedups from Cirrus HPC.
+1. Vector PDF charts (*.pdf) with white backgrounds, clear axes, ticks, and numeric scales.
+2. Formatted Markdown summary tables with exact numbers and speedups from Cirrus HPC.
 """
 
 import json
@@ -23,13 +22,13 @@ def extract_benchmarks(data):
     for bench in data.get("benchmarks", []):
         raw_name = bench["name"]
 
-        # If aggregates exist (e.g. from Cirrus run), keep only the _mean
+        # If aggregates exist (from Cirrus --benchmark_report_aggregates_only=true), extract _mean
         if has_aggregates:
             if not raw_name.endswith("_mean"):
                 continue
             clean_name = raw_name[:-5]
         else:
-            if "_mean" in raw_name or "_median" in raw_name or "_stddev" in raw_name or "_cv" in raw_name:
+            if any(s in raw_name for s in ("_mean", "_median", "_stddev", "_cv")):
                 continue
             clean_name = raw_name
 
@@ -47,11 +46,14 @@ def extract_benchmarks(data):
     return results
 
 def format_x_label(val):
-    if val >= 1_000_000:
-        return f"{int(val/1_000_000)}M" if val % 1_000_000 == 0 else f"{val/1_000_000:.1f}M"
-    if val >= 1_000:
-        return f"{int(val/1_000)}K" if val % 1_000 == 0 else f"{val/1_000:.1f}K"
-    return str(int(val))
+    val = int(val)
+    if val >= 1024 * 1024:
+        mb = val / (1024 * 1024)
+        return f"{int(mb)}M" if val % (1024 * 1024) == 0 else f"{mb:.1f}M"
+    if val >= 1024:
+        kb = val / 1024
+        return f"{int(kb)}K" if val % 1024 == 0 else f"{kb:.1f}K"
+    return str(val)
 
 def format_y_label(val):
     if val >= 1_000_000_000:
@@ -59,20 +61,184 @@ def format_y_label(val):
     if val >= 1_000_000:
         return f"{val/1_000_000:.1f} ms" if val >= 10_000_000 else f"{val/1_000_000:.2f} ms"
     if val >= 1_000:
-        return f"{val/1_000:.0f} µs" if val >= 10_000 else f"{val/1_000:.1f} µs"
+        return f"{val/1_000:.0f} us" if val >= 10_000 else f"{val/1_000:.1f} us"
     return f"{int(val)} ns"
 
-def render_svg_chart(title, x_title, y_title, series_dict, out_path, x_log=True, y_log=True):
-    """
-    Renders a clean, publication-ready SVG plot with white background,
-    crisp grid lines, explicit axis tick marks, and formatted numeric scale labels.
-    """
-    width, height = 900, 520
-    margin = {"top": 60, "right": 210, "bottom": 70, "left": 95}
+def plot_with_matplotlib(title, x_title, y_title, series_dict, out_pdf_path, x_log=True, y_log=True):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as ticker
+
+    plt.figure(figsize=(9.5, 5.5))
+    ax = plt.gca()
+    ax.set_facecolor("#ffffff")
+    plt.gcf().patch.set_facecolor("#ffffff")
+
+    palette = [
+        ("#1d4ed8", "o", "-"),   # Blue
+        ("#dc2626", "s", "--"),  # Red
+        ("#16a34a", "^", "-."),  # Green
+        ("#9333ea", "D", ":"),   # Purple
+        ("#ea580c", "v", "-"),   # Orange
+    ]
+
+    for i, (name, pts) in enumerate(series_dict.items()):
+        if not pts:
+            continue
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        color, marker, line_style = palette[i % len(palette)]
+        ax.plot(xs, ys, label=name, color=color, marker=marker, linestyle=line_style,
+                linewidth=2.2, markersize=6, alpha=0.95)
+
+    if x_log:
+        ax.set_xscale("log", base=2)
+        ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: format_x_label(x)))
+    if y_log:
+        ax.set_yscale("log")
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: format_y_label(y)))
+    else:
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: format_y_label(y)))
+
+    ax.grid(True, which="both", linestyle="--", linewidth=0.6, alpha=0.7, color="#d1d5db")
+    ax.tick_params(axis="both", which="major", labelsize=10.5, color="#111827")
+
+    plt.title(title, fontsize=13.5, fontweight="bold", pad=12, color="#111827")
+    plt.xlabel(x_title, fontsize=11.5, labelpad=9, color="#111827", fontweight="600")
+    plt.ylabel(y_title, fontsize=11.5, labelpad=9, color="#111827", fontweight="600")
+
+    plt.legend(frameon=True, facecolor="#f9fafb", edgecolor="#e5e7eb", fontsize=9.5, loc="best")
+    plt.tight_layout()
+
+    os.makedirs(os.path.dirname(out_pdf_path), exist_ok=True)
+    plt.savefig(out_pdf_path, format="pdf", bbox_inches="tight")
+    plt.close()
+    print(f"[PDF Generated via Matplotlib] {out_pdf_path}")
+
+class VectorPDF:
+    """Pure-Python vector PDF generator (zero-dependency fallback)."""
+    def __init__(self, width=820, height=480):
+        self.width = width
+        self.height = height
+        self.content = []
+
+    def rect(self, x, y, w, h, fill_rgb=None, stroke_rgb=None, line_width=1):
+        cmds = []
+        if fill_rgb:
+            cmds.append(f"{fill_rgb[0]:.3f} {fill_rgb[1]:.3f} {fill_rgb[2]:.3f} rg")
+        if stroke_rgb:
+            cmds.append(f"{stroke_rgb[0]:.3f} {stroke_rgb[1]:.3f} {stroke_rgb[2]:.3f} RG")
+            cmds.append(f"{line_width:.2f} w")
+        cmds.append(f"{x:.2f} {y:.2f} {w:.2f} {h:.2f} re")
+        if fill_rgb and stroke_rgb:
+            cmds.append("B")
+        elif fill_rgb:
+            cmds.append("f")
+        elif stroke_rgb:
+            cmds.append("S")
+        self.content.append("\n".join(cmds))
+
+    def line(self, x1, y1, x2, y2, stroke_rgb=(0,0,0), line_width=1, dash=None):
+        cmds = [f"{stroke_rgb[0]:.3f} {stroke_rgb[1]:.3f} {stroke_rgb[2]:.3f} RG", f"{line_width:.2f} w"]
+        if dash:
+            cmds.append(f"[{dash[0]} {dash[1]}] 0 d")
+        else:
+            cmds.append("[] 0 d")
+        cmds.append(f"{x1:.2f} {y1:.2f} m {x2:.2f} {y2:.2f} l S")
+        self.content.append("\n".join(cmds))
+
+    def polyline(self, points, stroke_rgb=(0,0,0), line_width=2):
+        if not points:
+            return
+        cmds = [
+            f"{stroke_rgb[0]:.3f} {stroke_rgb[1]:.3f} {stroke_rgb[2]:.3f} RG",
+            f"{line_width:.2f} w",
+            "[] 0 d",
+            f"{points[0][0]:.2f} {points[0][1]:.2f} m"
+        ]
+        for p in points[1:]:
+            cmds.append(f"{p[0]:.2f} {p[1]:.2f} l")
+        cmds.append("S")
+        self.content.append("\n".join(cmds))
+
+    def circle(self, cx, cy, r, fill_rgb=(0,0,0), stroke_rgb=None):
+        k = 0.5522847498 * r
+        cmds = []
+        if fill_rgb:
+            cmds.append(f"{fill_rgb[0]:.3f} {fill_rgb[1]:.3f} {fill_rgb[2]:.3f} rg")
+        if stroke_rgb:
+            cmds.append(f"{stroke_rgb[0]:.3f} {stroke_rgb[1]:.3f} {stroke_rgb[2]:.3f} RG 1 w")
+        cmds.append(f"{cx+r:.2f} {cy:.2f} m")
+        cmds.append(f"{cx+r:.2f} {cy+k:.2f} {cx+k:.2f} {cy+r:.2f} {cx:.2f} {cy+r:.2f} c")
+        cmds.append(f"{cx-k:.2f} {cy+r:.2f} {cx-r:.2f} {cy+k:.2f} {cx-r:.2f} {cy:.2f} c")
+        cmds.append(f"{cx-r:.2f} {cy-k:.2f} {cx-k:.2f} {cy-r:.2f} {cx:.2f} {cy-r:.2f} c")
+        cmds.append(f"{cx+k:.2f} {cy-r:.2f} {cx+r:.2f} {cy-k:.2f} {cx+r:.2f} {cy:.2f} c")
+        if fill_rgb and stroke_rgb:
+            cmds.append("B")
+        elif fill_rgb:
+            cmds.append("f")
+        else:
+            cmds.append("S")
+        self.content.append("\n".join(cmds))
+
+    def text(self, x, y, string, font_size=10, fill_rgb=(0,0,0), font="/F1", align="left"):
+        escaped = string.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        approx_w = len(string) * font_size * 0.52
+        tx = x
+        if align == "center":
+            tx = x - approx_w / 2
+        elif align == "right":
+            tx = x - approx_w
+        cmd = f"BT {font} {font_size} Tf {fill_rgb[0]:.3f} {fill_rgb[1]:.3f} {fill_rgb[2]:.3f} rg 1 0 0 1 {tx:.2f} {y:.2f} Tm ({escaped}) Tj ET"
+        self.content.append(cmd)
+
+    def text_vertical(self, x, y, string, font_size=10, fill_rgb=(0,0,0), font="/F1", align="center"):
+        escaped = string.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        approx_w = len(string) * font_size * 0.52
+        offset = -approx_w / 2 if align == "center" else (-approx_w if align == "right" else 0)
+        # Coordinate transform rotating 90 degrees CCW: [0 1 -1 0 tx ty]
+        cmd = f"q 0 1 -1 0 {x:.2f} {y:.2f} cm BT {font} {font_size} Tf {fill_rgb[0]:.3f} {fill_rgb[1]:.3f} {fill_rgb[2]:.3f} rg 1 0 0 1 {offset:.2f} 0 Tm ({escaped}) Tj ET Q"
+        self.content.append(cmd)
+
+    def write_to_file(self, filepath):
+        stream_data = "\n".join(self.content).encode("latin1")
+        length = len(stream_data)
+
+        pdf = bytearray()
+        pdf.extend(b"%PDF-1.4\n")
+        offsets = []
+
+        def add_obj(data):
+            offsets.append(len(pdf))
+            obj_num = len(offsets)
+            pdf.extend(f"{obj_num} 0 obj\n".encode("latin1"))
+            pdf.extend(data)
+            pdf.extend(b"\nendobj\n")
+            return obj_num
+
+        add_obj(b"<< /Type /Catalog /Pages 2 0 R >>")
+        add_obj(b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>")
+        add_obj(f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {self.width} {self.height}] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >> >> >>".encode("latin1"))
+        add_obj(f"<< /Length {length} >>\nstream\n".encode("latin1") + stream_data + b"\nendstream")
+
+        xref_pos = len(pdf)
+        pdf.extend(f"xref\n0 {len(offsets)+1}\n0000000000 65535 f \n".encode("latin1"))
+        for off in offsets:
+            pdf.extend(f"{off:010d} 00000 n \n".encode("latin1"))
+        pdf.extend(f"trailer\n<< /Size {len(offsets)+1} /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n".encode("latin1"))
+
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, "wb") as f:
+            f.write(pdf)
+        print(f"[PDF Generated via VectorPDF] {filepath}")
+
+def plot_with_vector_pdf(title, x_title, y_title, series_dict, out_pdf_path, x_log=True, y_log=True):
+    width, height = 820, 480
+    margin = {"top": 55, "right": 240, "bottom": 60, "left": 85}
     plot_w = width - margin["left"] - margin["right"]
     plot_h = height - margin["top"] - margin["bottom"]
 
-    # Gather data points
     all_x = []
     all_y = []
     for pts in series_dict.values():
@@ -84,15 +250,12 @@ def render_svg_chart(title, x_title, y_title, series_dict, out_path, x_log=True,
     if not all_x or not all_y:
         return
 
-    # Determine axis ranges
     raw_min_x, raw_max_x = min(all_x), max(all_x)
     raw_min_y, raw_max_y = min(all_y), max(all_y)
 
-    # Compute neat ticks
     if x_log:
         min_exp_x = int(math.floor(math.log2(raw_min_x)))
         max_exp_x = int(math.ceil(math.log2(raw_max_x)))
-        # Filter to powers of 4 if too many ticks
         step = 2 if (max_exp_x - min_exp_x) >= 8 else 1
         x_ticks = [2**e for e in range(min_exp_x, max_exp_x + 1, step)]
         plot_min_x = x_ticks[0]
@@ -110,7 +273,7 @@ def render_svg_chart(title, x_title, y_title, series_dict, out_path, x_log=True,
         plot_max_y = y_ticks[-1]
     else:
         plot_min_y = 0
-        plot_max_y = raw_max_y * 1.1
+        plot_max_y = raw_max_y * 1.15
         y_ticks = [plot_max_y * (i / 5.0) for i in range(6)]
 
     def scale_x(val):
@@ -125,98 +288,74 @@ def render_svg_chart(title, x_title, y_title, series_dict, out_path, x_log=True,
             t = (math.log10(val) - math.log10(plot_min_y)) / (math.log10(plot_max_y) - math.log10(plot_min_y) or 1)
         else:
             t = (val - plot_min_y) / (plot_max_y - plot_min_y or 1)
-        return margin["top"] + (1.0 - t) * plot_h
+        return margin["bottom"] + t * plot_h
 
-    # Color palette (clean, distinct colors)
-    palette = [
-        {"color": "#1d4ed8", "shape": "circle"},    # Vibrant Blue
-        {"color": "#dc2626", "shape": "rect"},      # Bright Red
-        {"color": "#15803d", "shape": "triangle"},  # Forest Green
-        {"color": "#7e22ce", "shape": "diamond"},   # Purple
-        {"color": "#c2410c", "shape": "circle"},    # Burnt Orange
-    ]
+    pdf = VectorPDF(width, height)
+    # White background
+    pdf.rect(0, 0, width, height, fill_rgb=(1, 1, 1))
+    # Plot frame
+    pdf.rect(margin["left"], margin["bottom"], plot_w, plot_h, fill_rgb=(0.99, 0.99, 0.995), stroke_rgb=(0.85, 0.88, 0.91), line_width=1.2)
 
-    svg = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="100%" height="100%">',
-        f'  <defs>',
-        f'    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">',
-        f'      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000000" flood-opacity="0.06"/>',
-        f'    </filter>',
-        f'  </defs>',
-        # Background
-        f'  <rect width="{width}" height="{height}" fill="#ffffff" rx="8" />',
-        f'  <rect x="{margin["left"]}" y="{margin["top"]}" width="{plot_w}" height="{plot_h}" fill="#fcfcfd" stroke="#e2e8f0" stroke-width="1.2"/>',
-        # Title
-        f'  <text x="{margin["left"]}" y="36" fill="#0f172a" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700">{title}</text>',
-        f'  <text x="{margin["left"] + plot_w/2}" y="{height - 18}" fill="#475569" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">{x_title}</text>',
-        f'  <text x="24" y="{margin["top"] + plot_h/2}" fill="#475569" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle" transform="rotate(-90 24 {margin["top"] + plot_h/2})">{y_title}</text>',
-    ]
+    # Title & Axis labels
+    pdf.text(margin["left"], height - 35, title, font_size=13, font="/F2", fill_rgb=(0.08, 0.11, 0.16))
+    pdf.text(margin["left"] + plot_w / 2, 22, x_title, font_size=10, font="/F2", fill_rgb=(0.28, 0.33, 0.41), align="center")
+    
+    # Vertically rotated Y-axis label centered on Y axis
+    pdf.text_vertical(24, margin["bottom"] + plot_h / 2, y_title, font_size=10, font="/F2", fill_rgb=(0.28, 0.33, 0.41), align="center")
 
-    # Horizontal Grid Lines & Y Ticks
+    # Grid & Y ticks
     for y_val in y_ticks:
         py = scale_y(y_val)
-        if margin["top"] <= py <= margin["top"] + plot_h:
-            svg.append(f'  <line x1="{margin["left"]}" y1="{py:.1f}" x2="{margin["left"] + plot_w}" y2="{py:.1f}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>')
-            svg.append(f'  <line x1="{margin["left"] - 6}" y1="{py:.1f}" x2="{margin["left"]}" y2="{py:.1f}" stroke="#94a3b8" stroke-width="1.2"/>')
-            svg.append(f'  <text x="{margin["left"] - 12}" y="{py + 4:.1f}" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">{format_y_label(y_val)}</text>')
+        if margin["bottom"] <= py <= margin["bottom"] + plot_h:
+            pdf.line(margin["left"], py, margin["left"] + plot_w, py, stroke_rgb=(0.89, 0.91, 0.94), line_width=0.8, dash=(3, 3))
+            pdf.line(margin["left"] - 5, py, margin["left"], py, stroke_rgb=(0.58, 0.64, 0.72), line_width=1)
+            pdf.text(margin["left"] - 8, py - 3, format_y_label(y_val), font_size=9, font="/F1", fill_rgb=(0.28, 0.33, 0.41), align="right")
 
-    # Vertical Grid Lines & X Ticks
+    # Grid & X ticks
     for x_val in x_ticks:
         px = scale_x(x_val)
         if margin["left"] <= px <= margin["left"] + plot_w:
-            svg.append(f'  <line x1="{px:.1f}" y1="{margin["top"]}" x2="{px:.1f}" y2="{margin["top"] + plot_h}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>')
-            svg.append(f'  <line x1="{px:.1f}" y1="{margin["top"] + plot_h}" x2="{px:.1f}" y2="{margin["top"] + plot_h + 6}" stroke="#94a3b8" stroke-width="1.2"/>')
-            svg.append(f'  <text x="{px:.1f}" y="{margin["top"] + plot_h + 22}" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">{format_x_label(x_val)}</text>')
+            pdf.line(px, margin["bottom"], px, margin["bottom"] + plot_h, stroke_rgb=(0.89, 0.91, 0.94), line_width=0.8, dash=(3, 3))
+            pdf.line(px, margin["bottom"] - 5, px, margin["bottom"], stroke_rgb=(0.58, 0.64, 0.72), line_width=1)
+            pdf.text(px, margin["bottom"] - 16, format_x_label(x_val), font_size=9, font="/F1", fill_rgb=(0.28, 0.33, 0.41), align="center")
 
-    # Legend Container
-    leg_x = margin["left"] + plot_w + 16
-    leg_y = margin["top"] + 10
-    leg_w = margin["right"] - 26
-    leg_h = len(series_dict) * 32 + 16
-    svg.append(f'  <rect x="{leg_x}" y="{leg_y}" width="{leg_w}" height="{leg_h}" fill="#f8fafc" stroke="#e2e8f0" rx="6" filter="url(#shadow)"/>')
+    colors = [
+        (0.11, 0.31, 0.85),  # Blue
+        (0.86, 0.15, 0.15),  # Red
+        (0.08, 0.63, 0.24),  # Green
+        (0.58, 0.20, 0.92),  # Purple
+        (0.92, 0.35, 0.05),  # Orange
+    ]
 
-    # Draw Series Data & Legend Entries
+    leg_x = margin["left"] + plot_w + 14
+    leg_y = margin["bottom"] + plot_h - 10
+    leg_w = margin["right"] - 22
+    leg_h = len(series_dict) * 26 + 14
+    pdf.rect(leg_x, leg_y - leg_h, leg_w, leg_h, fill_rgb=(0.97, 0.98, 0.99), stroke_rgb=(0.88, 0.90, 0.93), line_width=1)
+
     for i, (name, pts) in enumerate(series_dict.items()):
         if not pts:
             continue
-        style = palette[i % len(palette)]
-        color = style["color"]
-        shape = style["shape"]
+        c = colors[i % len(colors)]
+        screen_pts = [(scale_x(x), scale_y(y)) for x, y in pts]
 
-        poly_pts = []
-        for x, y in pts:
-            px = scale_x(x)
-            py = scale_y(y)
-            poly_pts.append(f"{px:.1f},{py:.1f}")
+        pdf.polyline(screen_pts, stroke_rgb=c, line_width=2.2)
+        for px, py in screen_pts:
+            pdf.circle(px, py, 3.5, fill_rgb=c)
 
-        # Polyline
-        svg.append(f'  <polyline points="{" ".join(poly_pts)}" fill="none" stroke="{color}" stroke-width="2.4" stroke-linejoin="round"/>')
+        entry_y = leg_y - 20 - i * 26
+        pdf.line(leg_x + 8, entry_y + 3, leg_x + 24, entry_y + 3, stroke_rgb=c, line_width=2.2)
+        pdf.circle(leg_x + 16, entry_y + 3, 3, fill_rgb=c)
+        pdf.text(leg_x + 28, entry_y, name, font_size=8.5, font="/F1", fill_rgb=(0.12, 0.16, 0.23))
 
-        # Markers
-        for x, y in pts:
-            px = scale_x(x)
-            py = scale_y(y)
-            if shape == "circle":
-                svg.append(f'  <circle cx="{px:.1f}" cy="{py:.1f}" r="4.2" fill="{color}" stroke="#ffffff" stroke-width="1.5"/>')
-            elif shape == "rect":
-                svg.append(f'  <rect x="{px-4:.1f}" y="{py-4:.1f}" width="8" height="8" fill="{color}" stroke="#ffffff" stroke-width="1.5"/>')
-            elif shape == "triangle":
-                svg.append(f'  <polygon points="{px:.1f},{py-5:.1f} {px+4.5:.1f},{py+3.5:.1f} {px-4.5:.1f},{py+3.5:.1f}" fill="{color}" stroke="#ffffff" stroke-width="1.5"/>')
-            elif shape == "diamond":
-                svg.append(f'  <polygon points="{px:.1f},{py-5:.1f} {px+4.5:.1f},{py:.1f} {px:.1f},{py+5:.1f} {px-4.5:.1f},{py:.1f}" fill="{color}" stroke="#ffffff" stroke-width="1.5"/>')
+    pdf.write_to_file(out_pdf_path)
 
-        # Legend Entry
-        entry_y = leg_y + 20 + i * 32
-        svg.append(f'  <line x1="{leg_x + 12}" y1="{entry_y}" x2="{leg_x + 32}" y2="{entry_y}" stroke="{color}" stroke-width="2.4"/>')
-        svg.append(f'  <circle cx="{leg_x + 22}" cy="{entry_y}" r="4" fill="{color}" stroke="#ffffff" stroke-width="1.2"/>')
-        svg.append(f'  <text x="{leg_x + 40}" y="{entry_y + 4}" fill="#1e293b" font-family="system-ui, sans-serif" font-size="11" font-weight="500">{name}</text>')
-
-    svg.append('</svg>')
-
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    with open(out_path, "w") as f:
-        f.write("\n".join(svg))
-    print(f"[Chart Generated] {out_path}")
+def render_plot_pdf(title, x_title, y_title, series_dict, out_pdf_path, x_log=True, y_log=True):
+    try:
+        plot_with_matplotlib(title, x_title, y_title, series_dict, out_pdf_path, x_log=x_log, y_log=y_log)
+    except Exception as e:
+        print(f"[Notice] Matplotlib not used ({e}), rendering via native VectorPDF engine...")
+        plot_with_vector_pdf(title, x_title, y_title, series_dict, out_pdf_path, x_log=x_log, y_log=y_log)
 
 def generate_markdown_summary(results, output_path):
     lines = [
@@ -304,23 +443,23 @@ def main():
     chart_dir = "benchmarks/charts"
     os.makedirs(chart_dir, exist_ok=True)
 
-    # 1. Throughput Chart
-    render_svg_chart(
+    # 1. Throughput PDF Chart
+    render_plot_pdf(
         "PushBack Throughput: dynamicArray vs std::vector (Cirrus HPC)",
         "Sequence Size (N Elements)",
-        "Total Execution Time (log scale)",
+        "Total Latency (log scale)",
         {
             "dynamicArray (Geometric)": results.get("BM_DynamicArray_PushBack_Geometric", []),
             "std::vector (Geometric)": results.get("BM_StdVector_PushBack_Geometric", []),
             "dynamicArray (Reserved)": results.get("BM_DynamicArray_PushBack_Reserved", []),
             "std::vector (Reserved)": results.get("BM_StdVector_PushBack_Reserved", []),
         },
-        f"{chart_dir}/throughput_comparison.svg",
+        f"{chart_dir}/throughput_comparison.pdf",
         x_log=True, y_log=True
     )
 
-    # 2. Allocator Latency Chart
-    render_svg_chart(
+    # 2. Allocator Latency PDF Chart
+    render_plot_pdf(
         "Order Cycle Latency: Heap Allocator vs Monotonic Arena (Cirrus HPC)",
         "Elements Allocated Per Cycle (N)",
         "Cycle Time (ns)",
@@ -328,12 +467,12 @@ def main():
             "std::allocator (Heap malloc/free)": results.get("BM_Allocator_StdHeap", []),
             "ArenaAllocator (0-Syscall Bump)": results.get("BM_Allocator_MonotonicArena", []),
         },
-        f"{chart_dir}/allocator_latency.svg",
+        f"{chart_dir}/allocator_latency.pdf",
         x_log=True, y_log=False
     )
 
-    # 3. Boolean Specialization Chart
-    render_svg_chart(
+    # 3. Boolean Specialization PDF Chart
+    render_plot_pdf(
         "Boolean Traversal Latency: Byte vs Bit-Packed Specialization (Cirrus HPC)",
         "Total Boolean Elements (N)",
         "Scan Time (log scale)",
@@ -342,22 +481,22 @@ def main():
             "dynamicArray<bool> (Bit-Packed Proxy)": results.get("BM_Bool_BitPacked_Scan", []),
             "std::vector<bool> (STL Baseline)": results.get("BM_StdVector_Bool_Scan", []),
         },
-        f"{chart_dir}/bool_crossover.svg",
+        f"{chart_dir}/bool_crossover.pdf",
         x_log=True, y_log=True
     )
 
-    # 4. Iteration & Sort Comparison Chart
-    render_svg_chart(
-        "Algorithm & Iteration Throughput: dynamicArray vs std::vector (Cirrus HPC)",
+    # 4. Iteration & Sort Comparison PDF Chart
+    render_plot_pdf(
+        "Iteration & std::sort Throughput: dynamicArray vs std::vector (Cirrus HPC)",
         "Elements (N)",
         "Execution Time (log scale)",
         {
             "dynamicArray (std::sort)": results.get("BM_DynamicArray_Sort", []),
             "std::vector (std::sort)": results.get("BM_StdVector_Sort", []),
-            "dynamicArray (Sequential Scan)": results.get("BM_DynamicArray_Iteration", []),
-            "std::vector (Sequential Scan)": results.get("BM_StdVector_Iteration", []),
+            "dynamicArray (Sequential Iteration)": results.get("BM_DynamicArray_Iteration", []),
+            "std::vector (Sequential Iteration)": results.get("BM_StdVector_Iteration", []),
         },
-        f"{chart_dir}/algorithms_comparison.svg",
+        f"{chart_dir}/algorithms_comparison.pdf",
         x_log=True, y_log=True
     )
 

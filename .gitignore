@@ -9,3 +9,6 @@ build/
 
 #ignore vscode settings
 .vscode/
+.venv/
+.DS_Store
+

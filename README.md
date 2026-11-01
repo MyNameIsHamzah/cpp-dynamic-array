@@ -31,10 +31,10 @@ cpp-dynamic-array/
 ├── benchmarks/
 │   ├── bench_main.cpp            # Google Benchmark suite (throughput, arena, bool)
 │   ├── BENCHMARK_RESULTS.md      # Detailed benchmark metrics and tables
-│   └── charts/                   # Vector SVG performance curves
+│   └── charts/                   # Vector PDF performance charts
 ├── scripts/
 │   ├── cirrus_bench.slurm        # Slurm job runner for pinned core runs on Cirrus HPC
-│   └── plot_benchmarks.py        # Standalone SVG & Markdown reporting script
+│   └── plot_benchmarks.py        # Standalone PDF & Markdown reporting script
 ├── docs/
 │   └── DESIGN.md                 # Detailed technical specs and invariants
 ├── CMakeLists.txt
@@ -72,23 +72,14 @@ sbatch scripts/cirrus_bench.slurm
 
 ## Performance & Benchmark Findings
 
-Full numbers and analysis available in [benchmarks/BENCHMARK_RESULTS.md](benchmarks/BENCHMARK_RESULTS.md).
+Detailed metrics, tables, and speedup multipliers are available in [benchmarks/BENCHMARK_RESULTS.md](benchmarks/BENCHMARK_RESULTS.md).
 
-### 1. PushBack Throughput: dynamicArray vs std::vector
-![Throughput](benchmarks/charts/throughput_comparison.svg)
+All performance curves are generated as standalone vector PDF documents in `benchmarks/charts/`:
 
-- **Iteration speed**: `dynamicArray` clocks **~30 GB/s** sequential read bandwidth, matching and slightly exceeding `std::vector` thanks to direct pointer comparisons in the 3-pointer layout.
-- **Sorting**: `std::sort` on `dynamicArray` matches `std::vector` (5.01 µs vs 5.08 µs at 1,024 elements), validating contiguous random-access iterator performance.
-
-### 2. Allocator Impact: Heap malloc vs Monotonic Arena
-![Allocator Latency](benchmarks/charts/allocator_latency.svg)
-
-- **Zero-Syscall Latency Win**: Backing `dynamicArray` with `ArenaAllocator` yields up to **1.46x faster** allocation cycles over standard `malloc`/`free` heap allocations by avoiding kernel locking and fragmentation.
-
-### 3. The Boolean Specialization Crossover
-![Boolean Crossover](benchmarks/charts/bool_crossover.svg)
-
-- Demonstrates the trade-off between instruction count and memory bandwidth: 1-byte storage wins in tiny L1 working sets due to zero bit-masking ALU overhead, while bit-packed storage halves memory bus traffic at scale.
+- **[PushBack Throughput Chart (PDF)](benchmarks/charts/throughput_comparison.pdf)**: `dynamicArray` vs `std::vector` (geometric growth and reserved pre-allocation). Outperforms `std::vector` at small working sets ($N \le 1,024$) and large buffers ($N = 1,048,576$).
+- **[Allocator Latency Chart (PDF)](benchmarks/charts/allocator_latency.pdf)**: Demonstrates up to **1.72x speedup** (42% latency reduction) when backing `dynamicArray` with `ArenaAllocator` compared to `std::allocator` (`malloc`/`free`) by eliminating kernel syscalls and memory fragmentation.
+- **[Boolean Traversal Scan Chart (PDF)](benchmarks/charts/bool_crossover.pdf)**: Evaluates memory bandwidth vs bitmasking instruction overhead across `dynamicArray<uint8_t>`, bit-packed `dynamicArray<bool>`, and `std::vector<bool>`.
+- **[Algorithms & Iteration Chart (PDF)](benchmarks/charts/algorithms_comparison.pdf)**: Sequential iteration and `std::sort` throughput, demonstrating 1:1 parity with `std::vector` and validating contiguous random access iterator efficiency.
 
 ## Status
 
