@@ -1,39 +1,50 @@
-# Benchmark Results Summary
+# Cirrus HPC Benchmark Results & Performance Analysis
 
-Performance benchmarks compiled with `-O3 -DNDEBUG` comparing `dynamicArray` against `std::vector` and allocator variants.
+Benchmarked on a dedicated compute node (`cs-n0004`, 576 CPUs, 3.75 GHz, 32 MB L3 Cache) on the **Cirrus Supercomputer (EPCC)**. Pinned to core 0 via `taskset` to eliminate thread scheduling jitter and frequency scaling noise.
 
-## 1. Container PushBack Throughput (Time in ns)
+## 1. Container PushBack Throughput (Time per full sequence)
 
 | Elements (N) | dynamicArray (Geometric) | std::vector (Geometric) | Speedup vs STL | dynamicArray (Reserved) | std::vector (Reserved) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 64 | 164.3 ns | 99.1 ns | **0.60x** | 103.5 ns | 24.5 ns |
-| 256 | 505.6 ns | 198.8 ns | **0.39x** | 438.1 ns | 88.8 ns |
-| 1,024 | 1,757.0 ns | 473.1 ns | **0.27x** | 1,629.5 ns | 252.2 ns |
-| 4,096 | 6,908.8 ns | 1,476.5 ns | **0.21x** | 6,622.2 ns | 934.8 ns |
-| 16,384 | 26,489.0 ns | 5,121.9 ns | **0.19x** | 25,486.7 ns | 3,754.7 ns |
-| 65,536 | 107,272.1 ns | 19,308.6 ns | **0.18x** | 102,538.9 ns | 14,742.2 ns |
-| 262,144 | 439,055.3 ns | 90,745.0 ns | **0.21x** | 422,788.7 ns | 59,472.3 ns |
-| 1,048,576 | 1,703,487.7 ns | 301,619.4 ns | **0.18x** | 1,627,837.3 ns | 232,181.1 ns |
+| 64 | 103.6 ns | 110.2 ns | **1.06x (FASTER)** | 37.7 ns | 34.4 ns |
+| 256 | 239.3 ns | 253.5 ns | **1.06x (FASTER)** | 180.1 ns | 132.5 ns |
+| 1,024 | 807.9 ns | 822.1 ns | **1.02x (FASTER)** | 649.0 ns | 431.4 ns |
+| 4,096 | 2,778.5 ns | 2,655.7 ns | 0.96x | 2,422.4 ns | 1,566.4 ns |
+| 16,384 | 10,305.5 ns | 9,861.6 ns | 0.96x | 9,616.0 ns | 6,063.5 ns |
+| 65,536 | 88,365.4 ns | 38,351.2 ns | 0.43x | 38,343.3 ns | 24,226.1 ns |
+| 262,144 | 410,035.6 ns | 156,883.9 ns | 0.38x | 153,110.5 ns | 97,785.1 ns |
+| 1,048,576 | 1,444,564.6 ns | 1,453,382.7 ns | **1.01x (FASTER)** | 612,650.2 ns | 386,751.6 ns |
 
-## 2. Allocator Impact: std::allocator (Heap malloc) vs ArenaAllocator (0-Syscall Bump)
+## 2. Iteration & std::sort Performance (Validating 3-Pointer & Contiguous Iterators)
 
-| Cycle Elements | std::allocator (malloc/free) | ArenaAllocator (Bump + Reset) | Latency Reduction |
-| :--- | :--- | :--- | :--- |
-| 64 pushes | 163.4 ns | 112.1 ns | **1.46x faster** |
-| 256 pushes | 501.2 ns | 421.4 ns | **1.19x faster** |
-| 1,024 pushes | 1,753.9 ns | 1,645.3 ns | **1.07x faster** |
-| 4,096 pushes | 6,768.6 ns | 6,515.4 ns | **1.04x faster** |
-
-## 3. The Boolean Specialization Crossover (Scan Latency)
-
-| Total Booleans | dynamicArray<uint8_t> (Byte) | dynamicArray<bool> (1-bit Packed) | std::vector<bool> (STL) | Memory Bandwidth Advantage |
+| Elements (N) | dynamicArray Iteration | std::vector Iteration | dynamicArray std::sort | std::vector std::sort |
 | :--- | :--- | :--- | :--- | :--- |
-| 64 | 4.2 ns | 38.0 ns | 33.3 ns | **0.11x** |
-| 256 | 14.1 ns | 173.3 ns | 138.7 ns | **0.08x** |
-| 1,024 | 52.9 ns | 691.6 ns | 540.5 ns | **0.08x** |
-| 4,096 | 209.0 ns | 2,716.6 ns | 2,175.1 ns | **0.08x** |
-| 16,384 | 829.2 ns | 10,868.1 ns | 8,775.2 ns | **0.08x** |
-| 65,536 | 3,325.1 ns | 43,290.1 ns | 34,308.1 ns | **0.08x** |
-| 262,144 | 13,350.7 ns | 173,805.9 ns | 139,391.7 ns | **0.08x** |
-| 1,048,576 | 53,415.0 ns | 700,072.6 ns | 557,469.3 ns | **0.08x** |
-| 4,194,304 | 212,876.3 ns | 2,819,192.0 ns | 2,208,277.6 ns | **0.08x** |
+| 1,024 | 245.1 ns | 229.9 ns | 4,192.5 ns | 4,089.6 ns |
+| 4,096 | 1,063.8 ns | 1,049.0 ns | 20,414.6 ns | 19,959.7 ns |
+| 16,384 | 4,340.7 ns | 4,324.7 ns | 745,126.9 ns | 735,776.5 ns |
+| 65,536 | 17,442.8 ns | 17,428.1 ns | 3,626,978.4 ns | 3,579,394.6 ns |
+| 262,144 | 69,904.2 ns | 69,896.6 ns | N/A | N/A |
+| 1,048,576 | 280,306.8 ns | 279,955.6 ns | N/A | N/A |
+
+## 3. Allocator Impact: std::allocator (Heap malloc) vs ArenaAllocator (0-Syscall Bump)
+
+| Cycle Elements | std::allocator (malloc/free) | ArenaAllocator (Bump + Reset) | Speedup (Latency Win) |
+| :--- | :--- | :--- | :--- |
+| 64 pushes | 105.4 ns | 61.4 ns | **1.72x faster** |
+| 256 pushes | 241.4 ns | 175.7 ns | **1.37x faster** |
+| 1,024 pushes | 809.9 ns | 676.7 ns | **1.20x faster** |
+| 4,096 pushes | 2,778.8 ns | 2,557.4 ns | **1.09x faster** |
+
+## 4. The Boolean Specialization (Full Traversal Scan)
+
+| Total Booleans | dynamicArray<uint8_t> (Byte) | dynamicArray<bool> (1-bit Packed) | std::vector<bool> (STL) |
+| :--- | :--- | :--- | :--- |
+| 64 | 11.9 ns | 27.0 ns | 26.7 ns |
+| 256 | 49.4 ns | 115.2 ns | 111.9 ns |
+| 1,024 | 245.2 ns | 436.9 ns | 424.0 ns |
+| 4,096 | 1,064.0 ns | 1,721.0 ns | 1,670.7 ns |
+| 16,384 | 4,339.7 ns | 7,016.4 ns | 7,005.2 ns |
+| 65,536 | 17,443.4 ns | 27,782.0 ns | 28,023.9 ns |
+| 262,144 | 69,852.5 ns | 111,121.5 ns | 106,667.6 ns |
+| 1,048,576 | 279,508.1 ns | 444,877.9 ns | 452,810.4 ns |
+| 4,194,304 | 1,120,106.6 ns | 1,737,736.9 ns | 1,740,212.2 ns |

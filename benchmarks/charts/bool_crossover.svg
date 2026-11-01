@@ -1,44 +1,100 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="100%" height="100%">
-<rect width="800" height="480" fill="#0d1117" rx="8" />
-<text x="80" y="35" fill="#f0f6fc" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600">The Boolean Crossover: Byte Array vs Bit-Packed Specialization</text>
-<text x="360.0" y="465" fill="#8b949e" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle">Total Elements (N)</text>
-<text x="25" y="240.0" fill="#8b949e" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle" transform="rotate(-90 25 240.0)">Scan Time (ns, log scale)</text>
-<line x1="80" y1="420" x2="640" y2="420" stroke="#30363d" stroke-width="1"/>
-<line x1="80" y1="60" x2="80" y2="420" stroke="#30363d" stroke-width="1"/>
-<polyline points="80.0,420.0 150.0,387.4 220.0,351.9 290.0,315.0 360.0,278.1 430.0,240.8 500.0,203.6 570.0,166.4 640.0,129.3" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>
-<circle cx="80.0" cy="420.0" r="4" fill="#2563eb"/>
-<circle cx="150.0" cy="387.4" r="4" fill="#2563eb"/>
-<circle cx="220.0" cy="351.9" r="4" fill="#2563eb"/>
-<circle cx="290.0" cy="315.0" r="4" fill="#2563eb"/>
-<circle cx="360.0" cy="278.1" r="4" fill="#2563eb"/>
-<circle cx="430.0" cy="240.8" r="4" fill="#2563eb"/>
-<circle cx="500.0" cy="203.6" r="4" fill="#2563eb"/>
-<circle cx="570.0" cy="166.4" r="4" fill="#2563eb"/>
-<circle cx="640.0" cy="129.3" r="4" fill="#2563eb"/>
-<circle cx="660" cy="70" r="5" fill="#2563eb"/>
-<text x="672" y="74" fill="#c9d1d9" font-family="system-ui, sans-serif" font-size="11">dynamicArray<uint8_t> (1 Byte/Bool)</text>
-<polyline points="80.0,360.8 150.0,320.1 220.0,282.9 290.0,246.3 360.0,209.1 430.0,172.0 500.0,134.7 570.0,97.4 640.0,60.0" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linejoin="round"/>
-<circle cx="80.0" cy="360.8" r="4" fill="#dc2626"/>
-<circle cx="150.0" cy="320.1" r="4" fill="#dc2626"/>
-<circle cx="220.0" cy="282.9" r="4" fill="#dc2626"/>
-<circle cx="290.0" cy="246.3" r="4" fill="#dc2626"/>
-<circle cx="360.0" cy="209.1" r="4" fill="#dc2626"/>
-<circle cx="430.0" cy="172.0" r="4" fill="#dc2626"/>
-<circle cx="500.0" cy="134.7" r="4" fill="#dc2626"/>
-<circle cx="570.0" cy="97.4" r="4" fill="#dc2626"/>
-<circle cx="640.0" cy="60.0" r="4" fill="#dc2626"/>
-<circle cx="660" cy="94" r="5" fill="#dc2626"/>
-<text x="672" y="98" fill="#c9d1d9" font-family="system-ui, sans-serif" font-size="11">dynamicArray<bool> (Bit-Packed)</text>
-<polyline points="80.0,364.3 150.0,326.0 220.0,289.6 290.0,252.2 360.0,214.8 430.0,178.2 500.0,140.6 570.0,103.5 640.0,66.6" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linejoin="round"/>
-<circle cx="80.0" cy="364.3" r="4" fill="#16a34a"/>
-<circle cx="150.0" cy="326.0" r="4" fill="#16a34a"/>
-<circle cx="220.0" cy="289.6" r="4" fill="#16a34a"/>
-<circle cx="290.0" cy="252.2" r="4" fill="#16a34a"/>
-<circle cx="360.0" cy="214.8" r="4" fill="#16a34a"/>
-<circle cx="430.0" cy="178.2" r="4" fill="#16a34a"/>
-<circle cx="500.0" cy="140.6" r="4" fill="#16a34a"/>
-<circle cx="570.0" cy="103.5" r="4" fill="#16a34a"/>
-<circle cx="640.0" cy="66.6" r="4" fill="#16a34a"/>
-<circle cx="660" cy="118" r="5" fill="#16a34a"/>
-<text x="672" y="122" fill="#c9d1d9" font-family="system-ui, sans-serif" font-size="11">std::vector<bool> (STL Baseline)</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000000" flood-opacity="0.06"/>
+    </filter>
+  </defs>
+  <rect width="900" height="520" fill="#ffffff" rx="8" />
+  <rect x="95" y="60" width="595" height="390" fill="#fcfcfd" stroke="#e2e8f0" stroke-width="1.2"/>
+  <text x="95" y="36" fill="#0f172a" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700">Boolean Traversal Latency: Byte vs Bit-Packed Specialization (Cirrus HPC)</text>
+  <text x="392.5" y="502" fill="#475569" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">Total Boolean Elements (N)</text>
+  <text x="24" y="255.0" fill="#475569" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle" transform="rotate(-90 24 255.0)">Scan Time (log scale)</text>
+  <line x1="95" y1="450.0" x2="690" y2="450.0" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="89" y1="450.0" x2="95" y2="450.0" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="83" y="454.0" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">10 ns</text>
+  <line x1="95" y1="385.0" x2="690" y2="385.0" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="89" y1="385.0" x2="95" y2="385.0" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="83" y="389.0" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">100 ns</text>
+  <line x1="95" y1="320.0" x2="690" y2="320.0" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="89" y1="320.0" x2="95" y2="320.0" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="83" y="324.0" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">1.0 µs</text>
+  <line x1="95" y1="255.0" x2="690" y2="255.0" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="89" y1="255.0" x2="95" y2="255.0" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="83" y="259.0" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">10 µs</text>
+  <line x1="95" y1="190.0" x2="690" y2="190.0" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="89" y1="190.0" x2="95" y2="190.0" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="83" y="194.0" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">100 µs</text>
+  <line x1="95" y1="125.0" x2="690" y2="125.0" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="89" y1="125.0" x2="95" y2="125.0" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="83" y="129.0" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">1.00 ms</text>
+  <line x1="95" y1="60.0" x2="690" y2="60.0" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="89" y1="60.0" x2="95" y2="60.0" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="83" y="64.0" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">10.0 ms</text>
+  <line x1="95.0" y1="60" x2="95.0" y2="450" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="95.0" y1="450" x2="95.0" y2="456" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="95.0" y="472" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">64</text>
+  <line x1="169.4" y1="60" x2="169.4" y2="450" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="169.4" y1="450" x2="169.4" y2="456" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="169.4" y="472" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">256</text>
+  <line x1="243.8" y1="60" x2="243.8" y2="450" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="243.8" y1="450" x2="243.8" y2="456" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="243.8" y="472" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">1.0K</text>
+  <line x1="318.1" y1="60" x2="318.1" y2="450" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="318.1" y1="450" x2="318.1" y2="456" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="318.1" y="472" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">4.1K</text>
+  <line x1="392.5" y1="60" x2="392.5" y2="450" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="392.5" y1="450" x2="392.5" y2="456" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="392.5" y="472" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">16.4K</text>
+  <line x1="466.9" y1="60" x2="466.9" y2="450" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="466.9" y1="450" x2="466.9" y2="456" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="466.9" y="472" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">65.5K</text>
+  <line x1="541.2" y1="60" x2="541.2" y2="450" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="541.2" y1="450" x2="541.2" y2="456" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="541.2" y="472" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">262.1K</text>
+  <line x1="615.6" y1="60" x2="615.6" y2="450" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="615.6" y1="450" x2="615.6" y2="456" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="615.6" y="472" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">1.0M</text>
+  <line x1="690.0" y1="60" x2="690.0" y2="450" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="690.0" y1="450" x2="690.0" y2="456" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="690.0" y="472" fill="#475569" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">4.2M</text>
+  <rect x="706" y="70" width="184" height="112" fill="#f8fafc" stroke="#e2e8f0" rx="6" filter="url(#shadow)"/>
+  <polyline points="95.0,445.1 169.4,404.9 243.8,359.7 318.1,318.2 392.5,278.6 466.9,239.3 541.2,200.1 615.6,161.0 690.0,121.8" fill="none" stroke="#1d4ed8" stroke-width="2.4" stroke-linejoin="round"/>
+  <circle cx="95.0" cy="445.1" r="4.2" fill="#1d4ed8" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="169.4" cy="404.9" r="4.2" fill="#1d4ed8" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="243.8" cy="359.7" r="4.2" fill="#1d4ed8" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="318.1" cy="318.2" r="4.2" fill="#1d4ed8" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="392.5" cy="278.6" r="4.2" fill="#1d4ed8" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="466.9" cy="239.3" r="4.2" fill="#1d4ed8" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="541.2" cy="200.1" r="4.2" fill="#1d4ed8" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="615.6" cy="161.0" r="4.2" fill="#1d4ed8" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="690.0" cy="121.8" r="4.2" fill="#1d4ed8" stroke="#ffffff" stroke-width="1.5"/>
+  <line x1="718" y1="90" x2="738" y2="90" stroke="#1d4ed8" stroke-width="2.4"/>
+  <circle cx="728" cy="90" r="4" fill="#1d4ed8" stroke="#ffffff" stroke-width="1.2"/>
+  <text x="746" y="94" fill="#1e293b" font-family="system-ui, sans-serif" font-size="11" font-weight="500">dynamicArray<uint8_t> (Byte Array)</text>
+  <polyline points="95.0,422.0 169.4,381.0 243.8,343.4 318.1,304.7 392.5,265.0 466.9,226.2 541.2,187.0 615.6,147.9 690.0,109.4" fill="none" stroke="#dc2626" stroke-width="2.4" stroke-linejoin="round"/>
+  <rect x="91.0" y="418.0" width="8" height="8" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+  <rect x="165.4" y="377.0" width="8" height="8" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+  <rect x="239.8" y="339.4" width="8" height="8" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+  <rect x="314.1" y="300.7" width="8" height="8" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+  <rect x="388.5" y="261.0" width="8" height="8" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+  <rect x="462.9" y="222.2" width="8" height="8" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+  <rect x="537.2" y="183.0" width="8" height="8" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+  <rect x="611.6" y="143.9" width="8" height="8" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+  <rect x="686.0" y="105.4" width="8" height="8" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+  <line x1="718" y1="122" x2="738" y2="122" stroke="#dc2626" stroke-width="2.4"/>
+  <circle cx="728" cy="122" r="4" fill="#dc2626" stroke="#ffffff" stroke-width="1.2"/>
+  <text x="746" y="126" fill="#1e293b" font-family="system-ui, sans-serif" font-size="11" font-weight="500">dynamicArray<bool> (Bit-Packed Proxy)</text>
+  <polyline points="95.0,422.3 169.4,381.8 243.8,344.2 318.1,305.5 392.5,265.0 466.9,225.9 541.2,188.2 615.6,147.4 690.0,109.4" fill="none" stroke="#15803d" stroke-width="2.4" stroke-linejoin="round"/>
+  <polygon points="95.0,417.3 99.5,425.8 90.5,425.8" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+  <polygon points="169.4,376.8 173.9,385.3 164.9,385.3" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+  <polygon points="243.8,339.2 248.2,347.7 239.2,347.7" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+  <polygon points="318.1,300.5 322.6,309.0 313.6,309.0" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+  <polygon points="392.5,260.0 397.0,268.5 388.0,268.5" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+  <polygon points="466.9,220.9 471.4,229.4 462.4,229.4" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+  <polygon points="541.2,183.2 545.8,191.7 536.8,191.7" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+  <polygon points="615.6,142.4 620.1,150.9 611.1,150.9" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+  <polygon points="690.0,104.4 694.5,112.9 685.5,112.9" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+  <line x1="718" y1="154" x2="738" y2="154" stroke="#15803d" stroke-width="2.4"/>
+  <circle cx="728" cy="154" r="4" fill="#15803d" stroke="#ffffff" stroke-width="1.2"/>
+  <text x="746" y="158" fill="#1e293b" font-family="system-ui, sans-serif" font-size="11" font-weight="500">std::vector<bool> (STL Baseline)</text>
 </svg>
